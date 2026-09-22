@@ -163,6 +163,13 @@ export class VeriBidStack extends Stack {
         maxAge: Duration.minutes(10),
       },
     });
+    const defaultStage = api.defaultStage?.node.defaultChild as apigwv2.CfnStage | undefined;
+    if (defaultStage) {
+      defaultStage.defaultRouteSettings = {
+        throttlingBurstLimit: 50,
+        throttlingRateLimit: 25,
+      };
+    }
     const apiIntegration = new integrations.HttpLambdaIntegration('ApiIntegration', healthFunction);
     const cognitoAuthorizer = new authorizers.HttpJwtAuthorizer('CognitoJwtAuthorizer', userPool.userPoolProviderUrl, {
       jwtAudience: [userPoolClient.userPoolClientId],

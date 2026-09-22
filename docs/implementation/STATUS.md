@@ -29,10 +29,10 @@ live redeployment and authenticated acceptance after AWS credential refresh.
   returned three vendors, one conflict and two insufficient-evidence cells.
 - Live Amplify: `https://main.d2jw7e2fbiu6od.amplifyapp.com/` returned HTTP 200
   containing `VERIBID`; deployment job 3 succeeded.
-- Local contract evidence: `19 passed` in `backend/`, including deterministic
+- Local contract evidence: `21 passed` in `backend/`, including deterministic
   threshold/TCO, specialist routing, abstention, conflict pairs, OVERRIDE
   guard, bounded repair, vendor scope, source locators, append-only review,
-  matrix final decisions and PDF export payload.
+  matrix final decisions, PDF export payload and the Bedrock semantic branch.
 
 ## Acceptance tracking
 
@@ -43,7 +43,7 @@ live redeployment and authenticated acceptance after AWS credential refresh.
 | Harness drift check | PASS | `python scripts/check_agent_harness.py` passed after the local-vs-external lock distinction was corrected. |
 | Product implementation | IN_PROGRESS | Local P0/P1 workflow is implemented through export; live authenticated and production acceptance remains. |
 | AWS deployment / release proof | IN_PROGRESS | Live foundation is verified; authenticated E2E and proof artifacts remain. |
-| Contract/domain core | PASS | Pydantic domain models, deterministic tools, verifier, parsers, review and export paths are covered by 19 backend tests. |
+| Contract/domain core | PASS | Pydantic domain models, deterministic tools, verifier, parsers, review and export paths are covered by 21 backend tests. |
 
 ## Blockers and risks
 
