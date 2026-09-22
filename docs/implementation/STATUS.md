@@ -27,8 +27,11 @@ live redeployment and authenticated acceptance after AWS credential refresh.
   created in `us-east-1`.
 - Live API: `GET /api/v1/health` returned `status=ok`; `GET /api/v1/demo`
   returned three vendors, one conflict and two insufficient-evidence cells.
-- Live Amplify: `https://main.d2jw7e2fbiu6od.amplifyapp.com/` returned HTTP 200
-  containing `VERIBID`; deployment job 3 succeeded.
+- Live Amplify foundation: `https://main.d2jw7e2fbiu6od.amplifyapp.com/` and
+  deployment job 3 returned HTTP 200, but production browser inspection found
+  the previous SPA rewrite served `index.html` for Vite `/assets/*.js`, leaving
+  the React root empty. Fix `7ef8252` uses the AWS-recommended extension-aware
+  rewrite regex; redeployment and visual recheck are pending.
 - Local contract evidence: `21 passed` in `backend/`, including deterministic
   threshold/TCO, specialist routing, abstention, conflict pairs, OVERRIDE
   guard, bounded repair, vendor scope, source locators, append-only review,
@@ -42,7 +45,7 @@ live redeployment and authenticated acceptance after AWS credential refresh.
 | Project-local skill environment | PASS | `.agents/SOURCES.md`, `skills-lock.json` and setup script are present. |
 | Harness drift check | PASS | `python scripts/check_agent_harness.py` passed after the local-vs-external lock distinction was corrected. |
 | Product implementation | IN_PROGRESS | Local P0/P1 workflow is implemented through export; live authenticated and production acceptance remains. |
-| AWS deployment / release proof | IN_PROGRESS | Live foundation is verified; authenticated E2E and proof artifacts remain. |
+| AWS deployment / release proof | IN_PROGRESS | API health/demo are live; Amplify asset-rewrite fix, authenticated E2E and proof artifacts remain. |
 | Contract/domain core | PASS | Pydantic domain models, deterministic tools, verifier, parsers, review and export paths are covered by 21 backend tests. |
 
 ## Blockers and risks

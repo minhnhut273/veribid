@@ -10,6 +10,12 @@ and dependency-free PDF export bytes. Authenticated workspace, two-phase
 upload, worker ingestion, extraction, evaluation, review and export acceptance
 still require live credential refresh and execution.
 
+Production browser verification also found that the prior Amplify SPA rewrite
+returned HTML for Vite asset URLs, so the React root was empty even though the
+document request returned 200. This is recorded as a release blocker rather
+than a false PASS; commit `7ef8252` contains the extension-aware rewrite fix
+and requires redeployment before the landing/demo UI can be accepted.
+
 The pushed implementation commit `2c0f751` passed GitHub Actions run
 [`35778614955`](https://github.com/minhnhut273/veribid/actions/runs/35778614955)
 with backend, frontend and infrastructure checks. The static security review
