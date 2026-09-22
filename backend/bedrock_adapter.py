@@ -9,7 +9,10 @@ from typing import Any, Callable
 
 from pydantic import BaseModel
 
-from .domain import SchemaExecutionFailure
+try:
+    from .domain import SchemaExecutionFailure
+except ImportError:  # Lambda loads modules from the asset root.
+    from domain import SchemaExecutionFailure  # type: ignore
 
 
 @dataclass(frozen=True)

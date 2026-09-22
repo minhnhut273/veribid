@@ -21,7 +21,7 @@ jobs:
       - name: Harness and backend tests
         run: |
           python scripts/check_agent_harness.py
-          python -m pytest backend/test_health.py -q
+          python -m pytest backend -q
       - uses: actions/setup-node@v4
         with:
           node-version: 22

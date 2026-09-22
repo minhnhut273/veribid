@@ -54,6 +54,21 @@ def tco_calculator(*, annual_license: float, implementation_fee: float, support_
     )
 
 
+def tco_limit_check(*, annual_license: float, implementation_fee: float, support_per_year: float, contract_years: int, maximum_total: float, currency: str = "USD") -> DeterministicResult:
+    """Calculate TCO and own the pass/fail state against the buyer limit."""
+    calculated = tco_calculator(annual_license=annual_license, implementation_fee=implementation_fee, support_per_year=support_per_year, contract_years=contract_years, currency=currency)
+    total = calculated.result["tco"] if calculated.result else None
+    if total is None:
+        raise ValueError("TCO calculation did not return a total")
+    return DeterministicResult(
+        tool="tco_limit_check",
+        input={**calculated.input, "maximum_total": maximum_total},
+        passed=total <= maximum_total,
+        authoritative_state=EvaluationState.SATISFIED if total <= maximum_total else EvaluationState.NOT_SATISFIED,
+        result=calculated.result,
+    )
+
+
 def insufficient_evidence(tool: str, missing_fields: list[str]) -> DeterministicResult:
     return DeterministicResult(tool=tool, input={"missing_fields": missing_fields}, authoritative_state=EvaluationState.INSUFFICIENT_EVIDENCE)
 

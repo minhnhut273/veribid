@@ -9,9 +9,11 @@ Last verified: 2026-09-23
 The repository-local agent environment is now switched to implementation and
 shipping mode. The first deployed vertical slice includes CDK infrastructure,
 private storage, Cognito, a public HTTP API, an Amplify-hosted frontend, and a
-read-only synthetic demo. Authenticated workspace and two-phase upload routes
-are implemented and synthesized in the current stack update; live auth/upload
-acceptance is still pending credential refresh and test execution.
+read-only synthetic demo. The local authenticated workflow now covers scoped
+document upload, typed requirement extraction, explicit specialist routing,
+evaluation polling, evidence matrix, result detail, Human Review, audit events,
+and Markdown/PDF export. The latest backend/frontend/IaC changes still require
+live redeployment and authenticated acceptance after AWS credential refresh.
 
 ## Baseline evidence
 
@@ -27,9 +29,10 @@ acceptance is still pending credential refresh and test execution.
   returned three vendors, one conflict and two insufficient-evidence cells.
 - Live Amplify: `https://main.d2jw7e2fbiu6od.amplifyapp.com/` returned HTTP 200
   containing `VERIBID`; deployment job 3 succeeded.
-- Local contract evidence: `10 passed` in `backend/`, including deterministic
-  threshold/TCO, abstention, conflict pairs, OVERRIDE guard, bounded repair,
-  vendor scope and PDF/DOCX/XLSX source locators.
+- Local contract evidence: `19 passed` in `backend/`, including deterministic
+  threshold/TCO, specialist routing, abstention, conflict pairs, OVERRIDE
+  guard, bounded repair, vendor scope, source locators, append-only review,
+  matrix final decisions and PDF export payload.
 
 ## Acceptance tracking
 
@@ -38,9 +41,9 @@ acceptance is still pending credential refresh and test execution.
 | Repository constitution | PASS | `AGENTS.md` inspected and kept as the local source of truth. |
 | Project-local skill environment | PASS | `.agents/SOURCES.md`, `skills-lock.json` and setup script are present. |
 | Harness drift check | PASS | `python scripts/check_agent_harness.py` passed after the local-vs-external lock distinction was corrected. |
-| Product implementation | IN_PROGRESS | M1 public slice and M2/M3 contract routes are implemented; continue through M14. |
+| Product implementation | IN_PROGRESS | Local P0/P1 workflow is implemented through export; live authenticated and production acceptance remains. |
 | AWS deployment / release proof | IN_PROGRESS | Live foundation is verified; authenticated E2E and proof artifacts remain. |
-| Contract/domain core | PASS | Pydantic domain models, deterministic tools, verifier and parsers are covered by 10 backend tests. |
+| Contract/domain core | PASS | Pydantic domain models, deterministic tools, verifier, parsers, review and export paths are covered by 19 backend tests. |
 
 ## Blockers and risks
 
@@ -53,6 +56,7 @@ acceptance is still pending credential refresh and test execution.
 
 ## Continuation
 
-Refresh the AWS session, verify the current stack status, redeploy the JWT and
-upload route update if needed, then create a temporary Cognito test user for
-live workspace/upload acceptance and remove only that test data after proof.
+Refresh the AWS session, verify the current stack status, redeploy the latest
+JWT/upload/workflow/UI changes, then create a temporary Cognito test user for
+live workspace/upload/evaluation/review/export acceptance and remove only that
+test data after proof.

@@ -1,6 +1,6 @@
 import pytest
 
-from backend.deterministic import numeric_threshold_check, tco_calculator
+from backend.deterministic import numeric_threshold_check, tco_calculator, tco_limit_check
 from backend.domain import (
     EvaluationResult,
     EvaluationState,
@@ -12,6 +12,7 @@ from backend.domain import (
     validate_with_one_repair,
 )
 from backend.verifier import new_conflict_pair, verify_candidate
+from backend.specialists import Specialist, route_requirement
 
 
 def pointer(name: str = "proposal.pdf") -> SourcePointer:
@@ -41,6 +42,16 @@ def test_threshold_and_tco_are_deterministic():
     assert threshold.authoritative_state is EvaluationState.NOT_SATISFIED
     tco = tco_calculator(annual_license=120000, implementation_fee=40000, support_per_year=15000, contract_years=3)
     assert tco.result == {"tco": 445000.0, "currency": "USD"}
+    assert tco_limit_check(annual_license=120000, implementation_fee=40000, support_per_year=15000, contract_years=3, maximum_total=500000).authoritative_state is EvaluationState.SATISFIED
+
+
+def test_specialist_router_is_category_explicit():
+    requirement = {
+        "requirement_id": "REQ_01", "requirement_code": "SEC-01", "title": "EU residency", "description": "Data stays in EU",
+        "category": "COMPLIANCE", "mandatory": True, "is_disqualifying": True, "weight": 10, "evaluation_type": "SEMANTIC",
+        "source_pointer": {"source_pointer_id": "PTR_01", "document_id": "DOC_01", "document_name": "RFP.pdf", "document_type": "PDF"}, "validation_status": "VALID",
+    }
+    assert route_requirement(__import__("backend.domain", fromlist=["Requirement"]).Requirement.model_validate(requirement)) is Specialist.COMPLIANCE
 
 
 def test_verifier_abstains_without_resolvable_evidence():

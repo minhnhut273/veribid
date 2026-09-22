@@ -149,9 +149,9 @@ class HumanReview(BaseModel):
     evaluation_result_id: str = Field(min_length=1)
     action: ReviewAction
     system_state: EvaluationState
-    system_score: float | None = None
+    system_score: float | None = Field(default=None, ge=0)
     final_state: EvaluationState | None = None
-    final_score: float | None = None
+    final_score: float | None = Field(default=None, ge=0)
     rationale: str | None = None
     reviewed_at: datetime
     reviewer_sub: str = Field(min_length=1)

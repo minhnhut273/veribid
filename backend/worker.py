@@ -12,14 +12,16 @@ from typing import Any
 from uuid import uuid4
 
 try:
-    from .deterministic import numeric_threshold_check, tco_calculator
+    from .deterministic import insufficient_evidence, numeric_threshold_check, tco_limit_check
     from .domain import EvaluationState, Requirement, RequirementCategory, EvaluationType
     from .ingestion import parse_document
+    from .specialists import route_requirement
     from .verifier import new_conflict_pair, verify_candidate
 except ImportError:  # Lambda handler modules are loaded from the asset root.
-    from deterministic import numeric_threshold_check, tco_calculator  # type: ignore
+    from deterministic import insufficient_evidence, numeric_threshold_check, tco_limit_check  # type: ignore
     from domain import EvaluationState, Requirement, RequirementCategory, EvaluationType  # type: ignore
     from ingestion import parse_document  # type: ignore
+    from specialists import route_requirement  # type: ignore
     from verifier import new_conflict_pair, verify_candidate  # type: ignore
 
 try:
@@ -43,6 +45,32 @@ def _now() -> str:
 def _clients():
     import boto3
     return boto3.resource("dynamodb").Table(os.environ["TABLE_NAME"]), boto3.client("s3")
+
+
+def _mark_failed(event: dict[str, Any], error: Exception) -> None:
+    """Persist a terminal job state before allowing Step Functions to retry/fail."""
+    try:
+        table, _ = _clients()
+        evaluation_id = event.get("evaluation_id")
+        job_id = event.get("job_id") or event.get("run_id")
+        if not evaluation_id or not job_id:
+            return
+        table.update_item(
+            Key={"pk": f"EVAL#{evaluation_id}", "sk": f"JOB#{job_id}"},
+            UpdateExpression="SET #status = :status, error_code = :code, error_message = :message, updated_at = :at",
+            ExpressionAttributeNames={"#status": "status"},
+            ExpressionAttributeValues={":status": "FAILED", ":code": type(error).__name__, ":message": str(error)[:500], ":at": _now()},
+        )
+        if event.get("action") == "EVALUATE":
+            table.update_item(
+                Key={"pk": f"EVAL#{evaluation_id}", "sk": "META"},
+                UpdateExpression="SET #status = :status, updated_at = :at",
+                ExpressionAttributeNames={"#status": "status"},
+                ExpressionAttributeValues={":status": "FAILED", ":at": _now()},
+            )
+    except Exception:
+        # The original workflow error is more useful than a secondary persistence error.
+        pass
 
 
 def _query(table: Any, evaluation_id: str, prefix: str) -> list[dict[str, Any]]:
@@ -107,10 +135,11 @@ def _evaluate(event: dict[str, Any]) -> dict[str, Any]:
     evaluation_id, run_id = event["evaluation_id"], event["run_id"]
     requirements = [Requirement.model_validate(item["payload"]) for item in _query(table, evaluation_id, "REQ#")]
     chunks = [item["payload"] for item in _query(table, evaluation_id, "CHK#")]
+    requested_vendors = {value for value in event.get("vendor_ids", []) if isinstance(value, str)}
     vendor_chunks: dict[tuple[str, str], list[dict[str, Any]]] = {}
     for chunk in chunks:
         vendor_id, proposal_id = chunk.get("vendor_id"), chunk.get("proposal_id")
-        if vendor_id and proposal_id:
+        if vendor_id and proposal_id and (not requested_vendors or vendor_id in requested_vendors):
             vendor_chunks.setdefault((vendor_id, proposal_id), []).append(chunk)
     result_count = 0
     telemetry_totals = {"model_invocations": 0, "input_tokens": 0, "output_tokens": 0, "cache_read_input_tokens": 0, "cache_write_input_tokens": 0, "end_to_end_latency_ms": 0}
@@ -122,17 +151,19 @@ def _evaluate(event: dict[str, Any]) -> dict[str, Any]:
                 conflict_pairs = []
                 texts = " ".join(chunk.get("text", "") for chunk in scoped_chunks)
                 lower = texts.lower()
+                specialist_route = route_requirement(requirement)
                 deterministic = None
                 if requirement.requirement_code == "TECH-01":
                     values = [float(value) for value in re.findall(r"(\d+\.\d+)\s*%", texts)]
-                    deterministic = numeric_threshold_check(operator=">=", required_value=requirement.threshold or 99.99, actual_value=max(values) if values else 0, unit="%") if values else None
+                    deterministic = numeric_threshold_check(operator=">=", required_value=requirement.threshold or 99.99, actual_value=max(values), unit="%") if values else insufficient_evidence("numeric_threshold_check", ["availability"])
                 elif requirement.requirement_code == "COMM-01":
                     numbers = [float(value.replace(",", "")) for value in re.findall(r"(?:\$|USD\s*)([\d,]+)", texts, re.IGNORECASE)]
-                    deterministic = tco_calculator(annual_license=numbers[0], implementation_fee=numbers[1], support_per_year=numbers[2], contract_years=3) if len(numbers) >= 3 else None
+                    deterministic = tco_limit_check(annual_license=numbers[0], implementation_fee=numbers[1], support_per_year=numbers[2], contract_years=3, maximum_total=requirement.threshold or 500000) if len(numbers) >= 3 else insufficient_evidence("tco_limit_check", ["annual_license", "implementation_fee", "support_per_year"])
                 if "eu" in lower or "europe" in lower:
                     claims.append({"claim_text": "The proposal references EU processing or hosting.", "relation": "supports", "confidence": 0.9, "source_pointer": next(chunk["source_pointer"] for chunk in scoped_chunks if "eu" in chunk.get("text", "").lower() or "europe" in chunk.get("text", "").lower())})
                 if "processed in the us" in lower or "processed in us" in lower or "united states" in lower:
-                    claims.append({"claim_text": "The proposal references processing in the United States.", "relation": "contradicts", "confidence": 0.9, "source_pointer": next(chunk["source_pointer"] for chunk in scoped_chunks if "us" in chunk.get("text", "").lower() or "united states" in chunk.get("text", "").lower())})
+                    us_chunk = next(chunk for chunk in scoped_chunks if re.search(r"\b(?:us|u\.s\.|united states)\b", chunk.get("text", ""), re.IGNORECASE))
+                    claims.append({"claim_text": "The proposal references processing in the United States.", "relation": "contradicts", "confidence": 0.9, "source_pointer": us_chunk["source_pointer"]})
                 try:
                     from .domain import EvidenceClaim
                 except ImportError:
@@ -142,9 +173,9 @@ def _evaluate(event: dict[str, Any]) -> dict[str, Any]:
                     conflict_pairs = [new_conflict_pair(evidence_claims[0].evidence_claim_id, evidence_claims[1].evidence_claim_id, "DATA_RESIDENCY")]
                 suggested_state = EvaluationState.SATISFIED if evidence_claims else EvaluationState.INSUFFICIENT_EVIDENCE
                 suggested_score = 10 if evidence_claims else None
-                rationale = "Deterministic or source-grounded fixture evaluation."
+                rationale = f"{specialist_route.value}: deterministic or source-grounded fixture evaluation."
                 if bedrock and requirement.evaluation_type is EvaluationType.SEMANTIC and not conflict_pairs and evidence_claims:
-                    specialist, specialist_telemetry = bedrock.converse_json(
+                    specialist_output, specialist_telemetry = bedrock.converse_json(
                         system_prompt="Return only the typed JSON assessment. Never invent evidence and abstain when the supplied source claims are insufficient.",
                         user_prompt=json.dumps({"requirement": requirement.description, "vendor_id": vendor_id, "proposal_id": proposal_id, "claims": [claim.model_dump(mode="json") for claim in evidence_claims]}, sort_keys=True),
                         output_model=SpecialistOutput,
@@ -153,14 +184,14 @@ def _evaluate(event: dict[str, Any]) -> dict[str, Any]:
                         enable_cache=os.environ.get("PROMPT_CACHE_ENABLED") == "true",
                         repair=lambda text: "Repair the previous output into JSON with exactly state, score, rationale fields. Output JSON only.",
                     )
-                    suggested_state, suggested_score, rationale = specialist.state, specialist.score, specialist.rationale
+                    suggested_state, suggested_score, rationale = specialist_output.state, specialist_output.score, specialist_output.rationale
                     for key in telemetry_totals:
                         value = getattr(specialist_telemetry, key)
                         if value is not None:
                             telemetry_totals[key] += value
                 result = verify_candidate(evaluation_result_id=f"EVAL_{uuid4().hex[:16]}", requirement_id=requirement.requirement_id, vendor_id=vendor_id, proposal_id=proposal_id, suggested_state=suggested_state, suggested_score=suggested_score, max_score=10, rationale=rationale, claims=evidence_claims, conflict_pairs=conflict_pairs, deterministic_result=deterministic)
                 result_id = result.evaluation_result_id
-                batch.put_item(Item={"pk": f"EVAL#{evaluation_id}", "sk": f"RES#{result_id}", "run_id": run_id, "payload": result.model_dump(mode="json")})
+                batch.put_item(Item={"pk": f"EVAL#{evaluation_id}", "sk": f"RES#{result_id}", "run_id": run_id, "specialist": specialist_route.value, "payload": result.model_dump(mode="json")})
                 result_count += 1
     telemetry = {**telemetry_totals, "cache_read_input_tokens": telemetry_totals["cache_read_input_tokens"] or None, "cache_write_input_tokens": telemetry_totals["cache_write_input_tokens"] or None}
     table.put_item(Item={"pk": f"EVAL#{evaluation_id}", "sk": f"RUN#{run_id}", "run_id": run_id, "status": "COMPLETED", "progress": {"total_items": result_count, "completed_items": result_count, "failed_items": 0}, "telemetry": telemetry, "updated_at": _now()})
@@ -181,10 +212,18 @@ def _evaluate(event: dict[str, Any]) -> dict[str, Any]:
 
 def handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
     action = event.get("action")
-    if action == "INGEST":
-        return _ingest(event)
-    if action == "EXTRACT_REQUIREMENTS":
-        return _extract_requirements(event)
-    if action == "EVALUATE":
-        return _evaluate(event)
-    raise ValueError(f"unsupported workflow action: {action}")
+    try:
+        if action == "INGEST":
+            result = _ingest(event)
+        elif action == "EXTRACT_REQUIREMENTS":
+            result = _extract_requirements(event)
+        elif action == "EVALUATE":
+            result = _evaluate(event)
+        else:
+            raise ValueError(f"unsupported workflow action: {action}")
+        print(json.dumps({"workflow_step": action, "evaluation_id": event.get("evaluation_id"), "job_id": event.get("job_id"), "run_id": event.get("run_id"), "status": result.get("status")}, separators=(",", ":")))
+        return result
+    except Exception as error:
+        _mark_failed(event, error)
+        print(json.dumps({"workflow_step": action, "evaluation_id": event.get("evaluation_id"), "job_id": event.get("job_id"), "run_id": event.get("run_id"), "status": "FAILED", "error_code": type(error).__name__}, separators=(",", ":")))
+        raise

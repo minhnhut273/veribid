@@ -7,6 +7,7 @@ Cognito subject and evaluation identifier before any persistence or S3 call.
 
 from __future__ import annotations
 
+import base64
 import json
 import os
 from pathlib import PurePath
@@ -36,10 +37,112 @@ SUPPORTED_MEDIA_TYPES = {
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
 }
+MAX_UPLOAD_BYTES = 25 * 1024 * 1024
 
 
 def _now() -> str:
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+
+
+def _latest_reviews(table: Any, evaluation_id: str) -> dict[str, dict[str, Any]]:
+    items = table.query(
+        KeyConditionExpression="pk = :pk AND begins_with(sk, :prefix)",
+        ExpressionAttributeValues={":pk": f"EVAL#{evaluation_id}", ":prefix": "REV#"},
+    ).get("Items", [])
+    latest: dict[str, dict[str, Any]] = {}
+    for item in items:
+        payload = item.get("payload") or {}
+        result_id = payload.get("evaluation_result_id")
+        if not result_id:
+            continue
+        current = latest.get(result_id)
+        if current is None or str(payload.get("reviewed_at", "")) > str(current.get("reviewed_at", "")):
+            latest[result_id] = payload
+    return latest
+
+
+def _audit_item(evaluation_id: str, event_type: str, actor_sub: str, payload: dict[str, Any]) -> dict[str, Any]:
+    audit_id = f"AUD_{uuid4().hex[:16]}"
+    return {
+        "pk": f"EVAL#{evaluation_id}",
+        "sk": f"AUD#{_now()}#{audit_id}",
+        "payload": {
+            "audit_event_id": audit_id,
+            "aggregate_type": "EVALUATION",
+            "aggregate_id": evaluation_id,
+            "event_type": event_type,
+            "actor_sub": actor_sub,
+            "occurred_at": _now(),
+            "payload": payload,
+        },
+    }
+
+
+def _pdf_bytes(text: str) -> bytes:
+    """Build a tiny dependency-free PDF for the bounded MVP export path."""
+    lines = text.splitlines()[:48]
+    commands = ["BT", "/F1 10 Tf", "48 760 Td"]
+    for index, line in enumerate(lines):
+        escaped = line.replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)")[:115]
+        if index:
+            commands.append("0 -14 Td")
+        commands.append(f"({escaped}) Tj")
+    commands.append("ET")
+    stream = "\n".join(commands).encode("latin-1", errors="replace")
+    objects = [
+        b"<< /Type /Catalog /Pages 2 0 R >>",
+        b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+        b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>",
+        b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+        b"<< /Length " + str(len(stream)).encode() + b" >>\nstream\n" + stream + b"\nendstream",
+    ]
+    output = bytearray(b"%PDF-1.4\n")
+    offsets = [0]
+    for number, obj in enumerate(objects, start=1):
+        offsets.append(len(output))
+        output.extend(f"{number} 0 obj\n".encode())
+        output.extend(obj)
+        output.extend(b"\nendobj\n")
+    xref = len(output)
+    output.extend(f"xref\n0 {len(objects) + 1}\n".encode())
+    output.extend(b"0000000000 65535 f \n")
+    for offset in offsets[1:]:
+        output.extend(f"{offset:010d} 00000 n \n".encode())
+    output.extend(f"trailer\n<< /Size {len(objects) + 1} /Root 1 0 R >>\nstartxref\n{xref}\n%%EOF\n".encode())
+    return bytes(output)
+
+
+def _render_export(table: Any, evaluation_id: str) -> str:
+    requirements = [item["payload"] for item in table.query(KeyConditionExpression="pk = :pk AND begins_with(sk, :prefix)", ExpressionAttributeValues={":pk": f"EVAL#{evaluation_id}", ":prefix": "REQ#"}).get("Items", [])]
+    results = [item["payload"] for item in table.query(KeyConditionExpression="pk = :pk AND begins_with(sk, :prefix)", ExpressionAttributeValues={":pk": f"EVAL#{evaluation_id}", ":prefix": "RES#"}).get("Items", [])]
+    reviews = _latest_reviews(table, evaluation_id)
+    by_requirement = {requirement["requirement_id"]: requirement for requirement in requirements}
+    lines = [
+        "# VeriBid audit export",
+        "",
+        f"Evaluation: {evaluation_id}",
+        "",
+        "This export preserves system suggestions and human decisions. VeriBid does not automatically award a vendor.",
+        "",
+        "## Evidence matrix",
+    ]
+    for result in results:
+        requirement = by_requirement.get(result.get("requirement_id"), {})
+        review = reviews.get(result.get("evaluation_result_id"))
+        state = (review or {}).get("final_state") or result.get("state")
+        score = (review or {}).get("final_score") if review else None
+        if score is None:
+            score = result.get("suggested_score")
+        lines.append(f"- {requirement.get('requirement_code', result.get('requirement_id'))} / {result.get('vendor_id')}: {state} ({score if score is not None else 'n/a'})")
+        for claim in result.get("evidence_claims", []):
+            pointer = claim.get("source_pointer", {})
+            locator = pointer.get("page_number") or pointer.get("sheet_name") or pointer.get("section") or pointer.get("chunk_id") or "unresolved"
+            lines.append(f"  - {claim.get('relation')}: {claim.get('claim_text')} [{pointer.get('document_name', 'document')} @ {locator}]")
+        if result.get("conflict_pairs"):
+            lines.append("  - conflict_pairs: preserved and unresolved")
+        if review:
+            lines.append(f"  - human_review: {review.get('action')} by {review.get('reviewer_sub')}")
+    return "\n".join(lines) + "\n"
 
 
 def _request_id(event: dict[str, Any]) -> str:
@@ -66,6 +169,7 @@ def _success(data: Any, event: dict[str, Any], status: int = 200, next_cursor: A
 
 
 def _error(status: int, code: str, message: str, event: dict[str, Any], details: list[dict[str, Any]] | None = None) -> dict[str, Any]:
+    print(json.dumps({"request_id": _request_id(event), "status_code": status, "error_code": code}, separators=(",", ":")))
     return _response(status, {"error": {"code": code, "message": message, "details": details or [], "request_id": _request_id(event)}}, event)
 
 
@@ -206,6 +310,8 @@ def _complete_document(event: dict[str, Any], evaluation_id: str, document_id: s
         return _error(422, "SOURCE_NOT_RESOLVABLE", "Uploaded object was not found; ingestion did not start", event)
     if head.get("ContentLength", 0) <= 0:
         return _error(422, "SOURCE_NOT_RESOLVABLE", "Uploaded object is empty; ingestion did not start", event)
+    if head.get("ContentLength", 0) > MAX_UPLOAD_BYTES:
+        return _error(413, "PAYLOAD_TOO_LARGE", "Uploaded object exceeds the 25 MiB MVP limit", event)
     expected_type = document.get("media_type")
     actual_type = head.get("ContentType")
     if expected_type and actual_type and actual_type != expected_type:
@@ -239,6 +345,14 @@ def _start_async(event: dict[str, Any], evaluation_id: str, action: str, prefix:
     job_id = f"{prefix}{uuid4().hex[:16]}"
     response_data = {("run_id" if action == "EVALUATE" else "job_id"): job_id, "status": status}
     table.put_item(Item={"pk": f"EVAL#{evaluation_id}", "sk": f"JOB#{job_id}", "job_id": job_id, "run_id": job_id if action == "EVALUATE" else None, "owner_sub": owner, "status": status, "action": action, "created_at": _now()})
+    target_status = {"EXTRACT_REQUIREMENTS": "EXTRACTING_REQUIREMENTS", "EVALUATE": "EVALUATING"}.get(action)
+    if target_status:
+        table.update_item(
+            Key=_key(evaluation_id),
+            UpdateExpression="SET #status = :status, updated_at = :at",
+            ExpressionAttributeNames={"#status": "status"},
+            ExpressionAttributeValues={":status": target_status, ":at": _now()},
+        )
     if idem:
         table.put_item(Item={**_idempotency(str(idem)), "owner_sub": owner, "response": response_data, "status": 202, "created_at": _now()})
     if os.environ.get("STATE_MACHINE_ARN"):
@@ -288,6 +402,7 @@ def _matrix(event: dict[str, Any], evaluation_id: str) -> dict[str, Any]:
     table, _, _ = _clients()
     requirements = [item["payload"] for item in table.query(KeyConditionExpression="pk = :pk AND begins_with(sk, :prefix)", ExpressionAttributeValues={":pk": f"EVAL#{evaluation_id}", ":prefix": "REQ#"}).get("Items", [])]
     results = [item["payload"] for item in table.query(KeyConditionExpression="pk = :pk AND begins_with(sk, :prefix)", ExpressionAttributeValues={":pk": f"EVAL#{evaluation_id}", ":prefix": "RES#"}).get("Items", [])]
+    reviews = _latest_reviews(table, evaluation_id)
     vendor_ids = sorted({result["vendor_id"] for result in results})
     vendors = [{"vendor_id": value, "display_name": value} for value in vendor_ids]
     rows = []
@@ -295,7 +410,18 @@ def _matrix(event: dict[str, Any], evaluation_id: str) -> dict[str, Any]:
         cells = []
         for result in results:
             if result["requirement_id"] == requirement["requirement_id"]:
-                cells.append({"vendor_id": result["vendor_id"], "evaluation_result_id": result["evaluation_result_id"], "state": result["state"], "suggested_score": result.get("suggested_score"), "final_score": None, "review_status": "PENDING", "has_conflict": bool(result.get("conflict_pairs"))})
+                review = reviews.get(result["evaluation_result_id"])
+                cells.append({
+                    "vendor_id": result["vendor_id"],
+                    "evaluation_result_id": result["evaluation_result_id"],
+                    "state": result["state"],
+                    "suggested_score": result.get("suggested_score"),
+                    "final_state": review.get("final_state") if review else None,
+                    "final_score": review.get("final_score") if review else None,
+                    "review_status": ("CONFIRMED" if review and review.get("action") in {"ACCEPT", "OVERRIDE"} else "FOLLOWUP_REQUESTED" if review else "PENDING"),
+                    "specialist": result.get("specialist"),
+                    "has_conflict": bool(result.get("conflict_pairs")),
+                })
         rows.append({"requirement": {key: requirement.get(key) for key in ("requirement_id", "requirement_code", "title", "category", "mandatory", "is_disqualifying", "weight")}, "results": cells})
     return _success({"vendors": vendors, "rows": rows}, event)
 
@@ -309,7 +435,9 @@ def _result_detail(event: dict[str, Any], evaluation_id: str, result_id: str) ->
         return _error(404, "NOT_FOUND", "Evaluation result was not found", event)
     review = table.query(KeyConditionExpression="pk = :pk AND begins_with(sk, :prefix)", ExpressionAttributeValues={":pk": f"EVAL#{evaluation_id}", ":prefix": f"REV#{result_id}#"}, ScanIndexForward=False, Limit=1).get("Items", [])
     data = dict(item["payload"])
+    data["specialist"] = item.get("specialist")
     data["human_review"] = review[0].get("payload") if review else None
+    data["audit_events"] = [entry.get("payload") for entry in table.query(KeyConditionExpression="pk = :pk AND begins_with(sk, :prefix)", ExpressionAttributeValues={":pk": f"EVAL#{evaluation_id}", ":prefix": "AUD#"}).get("Items", []) if entry.get("payload", {}).get("payload", {}).get("evaluation_result_id") == result_id]
     return _success(data, event)
 
 
@@ -327,6 +455,7 @@ def _review(event: dict[str, Any], evaluation_id: str, result_id: str) -> dict[s
     except ValueError as exc:
         return _error(400, "VALIDATION_ERROR", str(exc), event)
     table.put_item(Item={"pk": f"EVAL#{evaluation_id}", "sk": f"REV#{result_id}#{review.human_review_id}", "payload": review.model_dump(mode="json"), "created_at": _now(), "owner_sub": _owner(event)})
+    table.put_item(Item=_audit_item(evaluation_id, "HUMAN_REVIEW_RECORDED", _owner(event) or "unknown", {"evaluation_result_id": result_id, "action": review.action.value, "system_state": review.system_state.value, "final_state": review.final_state.value if review.final_state else None}))
     return _success(review.model_dump(mode="json"), event, 201)
 
 
@@ -342,8 +471,15 @@ def _start_export(event: dict[str, Any], evaluation_id: str) -> dict[str, Any]:
         return _error(400, "VALIDATION_ERROR", "format must be MARKDOWN or PDF", event)
     table, _, _ = _clients()
     export_id = f"EXP_{uuid4().hex[:16]}"
-    table.put_item(Item={"pk": f"EVAL#{evaluation_id}", "sk": f"EXP#{export_id}", "export_id": export_id, "status": "READY", "format": format_name, "generated_at": _now(), "report_version": 1, "content": f"# VeriBid audit export\n\nEvaluation: {evaluation_id}\n\nThis report is generated from human-confirmed records and deterministic outcomes. No vendor is automatically awarded.", "owner_sub": _owner(event)})
-    return _success({"export_id": export_id, "status": "GENERATING"}, event, 202)
+    content = _render_export(table, evaluation_id)
+    item = {"pk": f"EVAL#{evaluation_id}", "sk": f"EXP#{export_id}", "export_id": export_id, "status": "READY", "format": format_name, "generated_at": _now(), "report_version": 1, "owner_sub": _owner(event)}
+    if format_name == "PDF":
+        item["content_base64"] = base64.b64encode(_pdf_bytes(content)).decode("ascii")
+    else:
+        item["content"] = content
+    table.put_item(Item=item)
+    table.put_item(Item=_audit_item(evaluation_id, "EXPORT_GENERATED", _owner(event) or "unknown", {"export_id": export_id, "format": format_name}))
+    return _success({"export_id": export_id, "status": "READY"}, event, 202)
 
 
 def _get_export(event: dict[str, Any], evaluation_id: str, export_id: str) -> dict[str, Any]:
@@ -353,12 +489,13 @@ def _get_export(event: dict[str, Any], evaluation_id: str, export_id: str) -> di
     item = table.get_item(Key={"pk": f"EVAL#{evaluation_id}", "sk": f"EXP#{export_id}"}, ConsistentRead=True).get("Item")
     if not item:
         return _error(404, "NOT_FOUND", "Export was not found", event)
-    return _success({key: item[key] for key in ("export_id", "status", "report_version", "generated_at", "format") if key in item}, event)
+    return _success({key: item[key] for key in ("export_id", "status", "report_version", "generated_at", "format", "content", "content_base64") if key in item}, event)
 
 
 def handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
     path = event.get("rawPath") or "/api/v1/health"
     method = (event.get("requestContext", {}).get("http", {}).get("method") or event.get("httpMethod") or "GET").upper()
+    print(json.dumps({"request_id": _request_id(event), "method": method, "path": path, "owner_present": bool(_owner(event))}, separators=(",", ":")))
     if path == "/api/v1/health" and method == "GET":
         return _success({"service": os.getenv("SERVICE_NAME", "veribid-api"), "version": os.getenv("SERVICE_VERSION", "unknown"), "status": "ok", "timestamp": _now()}, event)
     if path == "/api/v1/demo" and method == "GET":

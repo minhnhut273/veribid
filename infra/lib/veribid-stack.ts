@@ -20,6 +20,7 @@ export class VeriBidStack extends Stack {
 
     const bedrockModelId = this.node.tryGetContext('bedrockModelId') as string | undefined;
     const bedrockModelArn = this.node.tryGetContext('bedrockModelArn') as string | undefined;
+    const frontendOrigin = (this.node.tryGetContext('frontendOrigin') as string | undefined) ?? 'https://main.d2jw7e2fbiu6od.amplifyapp.com';
 
     const uploads = new s3.Bucket(this, 'UploadsBucket', {
       encryption: s3.BucketEncryption.S3_MANAGED,
@@ -30,8 +31,8 @@ export class VeriBidStack extends Stack {
       autoDeleteObjects: false,
       cors: [{
         allowedMethods: [s3.HttpMethods.PUT, s3.HttpMethods.HEAD],
-        allowedOrigins: ['*'],
-        allowedHeaders: ['*'],
+        allowedOrigins: [frontendOrigin],
+        allowedHeaders: ['Content-Type'],
         exposedHeaders: ['ETag'],
         maxAge: 300,
       }],
@@ -99,15 +100,24 @@ export class VeriBidStack extends Stack {
       }));
     }
 
+    const workerTask = new tasks.LambdaInvoke(this, 'RunWorkflowWorker', {
+      lambdaFunction: workerFunction,
+      payload: sfn.TaskInput.fromJsonPathAt('$'),
+      outputPath: '$.Payload',
+    });
+    workerTask.addRetry({
+      errors: ['States.TaskFailed'],
+      interval: Duration.seconds(2),
+      backoffRate: 2,
+      maxAttempts: 2,
+    });
+    workerTask.addCatch(new sfn.Fail(this, 'WorkflowFailed', {
+      cause: 'The workflow worker failed after bounded retries',
+    }), { resultPath: '$.error' });
+
     const workflow = new sfn.StateMachine(this, 'EvaluationStateMachine', {
       stateMachineName: 'veribid-evaluation',
-      definitionBody: sfn.DefinitionBody.fromChainable(
-        new tasks.LambdaInvoke(this, 'RunWorkflowWorker', {
-          lambdaFunction: workerFunction,
-          payload: sfn.TaskInput.fromJsonPathAt('$'),
-          outputPath: '$.Payload',
-        }),
-      ),
+      definitionBody: sfn.DefinitionBody.fromChainable(workerTask),
       stateMachineType: sfn.StateMachineType.STANDARD,
     });
 
@@ -127,10 +137,16 @@ export class VeriBidStack extends Stack {
     });
 
     records.grantReadWriteData(healthFunction);
-    uploads.grantReadWrite(healthFunction);
+    healthFunction.addToRolePolicy(new iam.PolicyStatement({
+      actions: ['s3:GetObject', 's3:PutObject'],
+      resources: [uploads.arnForObjects('evaluations/*')],
+    }));
     workflow.grantStartExecution(healthFunction);
     records.grantReadWriteData(workerFunction);
-    uploads.grantReadWrite(workerFunction);
+    workerFunction.addToRolePolicy(new iam.PolicyStatement({
+      actions: ['s3:GetObject'],
+      resources: [uploads.arnForObjects('evaluations/*')],
+    }));
     workerFunction.addToRolePolicy(new iam.PolicyStatement({
       actions: ['cloudwatch:PutMetricData'],
       resources: ['*'],
@@ -143,7 +159,7 @@ export class VeriBidStack extends Stack {
       corsPreflight: {
         allowHeaders: ['content-type', 'authorization', 'idempotency-key'],
         allowMethods: [apigwv2.CorsHttpMethod.GET, apigwv2.CorsHttpMethod.POST, apigwv2.CorsHttpMethod.PUT, apigwv2.CorsHttpMethod.OPTIONS],
-        allowOrigins: ['*'],
+        allowOrigins: [frontendOrigin],
         maxAge: Duration.minutes(10),
       },
     });

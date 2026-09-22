@@ -21,6 +21,10 @@ class IngestionError(RuntimeError):
     """The source cannot be parsed defensibly."""
 
 
+MAX_DOCUMENT_BYTES = 25 * 1024 * 1024
+MAX_XML_BYTES = 10 * 1024 * 1024
+
+
 class DocumentChunk(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
@@ -76,7 +80,12 @@ def parse_pdf(path: Path, document_id: str, vendor_id: str | None = None, propos
 def parse_docx(path: Path, document_id: str, vendor_id: str | None = None, proposal_id: str | None = None) -> list[DocumentChunk]:
     ns = {"w": "http://schemas.openxmlformats.org/wordprocessingml/2006/main"}
     try:
+        if path.stat().st_size > MAX_DOCUMENT_BYTES:
+            raise IngestionError("DOCX exceeds the 25 MiB MVP limit")
         with ZipFile(path) as archive:
+            document_member = archive.getinfo("word/document.xml")
+            if document_member.file_size > MAX_XML_BYTES:
+                raise IngestionError("DOCX XML part exceeds the parser limit")
             root = ET.fromstring(archive.read("word/document.xml"))
     except Exception as exc:
         raise IngestionError(f"DOCX parsing failed: {path.name}") from exc
@@ -92,6 +101,8 @@ def parse_docx(path: Path, document_id: str, vendor_id: str | None = None, propo
 
 def parse_xlsx(path: Path, document_id: str, vendor_id: str | None = None, proposal_id: str | None = None) -> list[DocumentChunk]:
     try:
+        if path.stat().st_size > MAX_DOCUMENT_BYTES:
+            raise IngestionError("XLSX exceeds the 25 MiB MVP limit")
         from openpyxl import load_workbook
         workbook = load_workbook(path, read_only=True, data_only=True)
     except Exception as exc:
@@ -109,6 +120,8 @@ def parse_xlsx(path: Path, document_id: str, vendor_id: str | None = None, propo
 
 def parse_document(path: str | Path, document_id: str, media_type: str, vendor_id: str | None = None, proposal_id: str | None = None) -> list[DocumentChunk]:
     file_path = Path(path)
+    if file_path.exists() and file_path.stat().st_size > MAX_DOCUMENT_BYTES:
+        raise IngestionError("document exceeds the 25 MiB MVP limit")
     if (vendor_id is None) != (proposal_id is None):
         raise ValueError("vendor_id and proposal_id must be supplied together")
     if media_type == "application/pdf":
