@@ -10,14 +10,13 @@ The repository-local agent environment is now switched to implementation and
 shipping mode. The first deployed vertical slice includes CDK infrastructure,
 private storage, Cognito, a public HTTP API, an Amplify-hosted frontend, and a
 read-only synthetic demo. Authenticated workspace and two-phase upload routes
-are deployed in the current stack update; live auth/upload acceptance is still
-pending credential refresh and test execution.
+are implemented and synthesized in the current stack update; live auth/upload
+acceptance is still pending credential refresh and test execution.
 
 ## Baseline evidence
 
 - GitHub remote: `https://github.com/minhnhut273/veribid.git`.
-- Foundation commit: `23bd86b`; product implementation commit is pending this
-  slice's verification and push.
+- Foundation commit: `23bd86b`; first product implementation commit: `0cc9517`.
 - Authoritative specifications: `Document/Phase_1/`.
 - Project-local skills: `.agents/skills/`, with provenance in `.agents/SOURCES.md`
   and installer hashes in `skills-lock.json`.
@@ -28,6 +27,9 @@ pending credential refresh and test execution.
   returned three vendors, one conflict and two insufficient-evidence cells.
 - Live Amplify: `https://main.d2jw7e2fbiu6od.amplifyapp.com/` returned HTTP 200
   containing `VERIBID`; deployment job 3 succeeded.
+- Local contract evidence: `10 passed` in `backend/`, including deterministic
+  threshold/TCO, abstention, conflict pairs, OVERRIDE guard, bounded repair,
+  vendor scope and PDF/DOCX/XLSX source locators.
 
 ## Acceptance tracking
 
@@ -38,6 +40,7 @@ pending credential refresh and test execution.
 | Harness drift check | PASS | `python scripts/check_agent_harness.py` passed after the local-vs-external lock distinction was corrected. |
 | Product implementation | IN_PROGRESS | M1 public slice and M2/M3 contract routes are implemented; continue through M14. |
 | AWS deployment / release proof | IN_PROGRESS | Live foundation is verified; authenticated E2E and proof artifacts remain. |
+| Contract/domain core | PASS | Pydantic domain models, deterministic tools, verifier and parsers are covered by 10 backend tests. |
 
 ## Blockers and risks
 

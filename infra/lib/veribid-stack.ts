@@ -11,6 +11,7 @@ import * as iam from 'aws-cdk-lib/aws-iam';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as sfn from 'aws-cdk-lib/aws-stepfunctions';
+import * as tasks from 'aws-cdk-lib/aws-stepfunctions-tasks';
 import { Construct } from 'constructs';
 
 export class VeriBidStack extends Stack {
@@ -66,11 +67,32 @@ export class VeriBidStack extends Stack {
       refreshTokenValidity: Duration.days(30),
     });
 
+    const backendCode = lambda.Code.fromAsset(path.join(__dirname, '../../backend'), {
+      bundling: {
+        image: cdk.DockerImage.fromRegistry('python:3.13-slim'),
+        command: ['sh', '-c', 'pip install --no-cache-dir -r requirements.txt -t /asset-output && cp -r . /asset-output'],
+      },
+    });
+
+    const workerFunction = new lambda.Function(this, 'WorkflowWorker', {
+      runtime: lambda.Runtime.PYTHON_3_13,
+      handler: 'worker.handler',
+      code: backendCode,
+      timeout: Duration.minutes(5),
+      memorySize: 1024,
+      environment: {
+        TABLE_NAME: records.tableName,
+        UPLOADS_BUCKET: uploads.bucketName,
+      },
+    });
+
     const workflow = new sfn.StateMachine(this, 'EvaluationStateMachine', {
       stateMachineName: 'veribid-evaluation',
       definitionBody: sfn.DefinitionBody.fromChainable(
-        new sfn.Pass(this, 'AwaitingEvaluationInput', {
-          result: sfn.Result.fromObject({ status: 'READY_FOR_WORKFLOW' }),
+        new tasks.LambdaInvoke(this, 'RunWorkflowWorker', {
+          lambdaFunction: workerFunction,
+          payload: sfn.TaskInput.fromJsonPathAt('$'),
+          outputPath: '$.Payload',
         }),
       ),
       stateMachineType: sfn.StateMachineType.STANDARD,
@@ -79,7 +101,7 @@ export class VeriBidStack extends Stack {
     const healthFunction = new lambda.Function(this, 'ApiFunction', {
       runtime: lambda.Runtime.PYTHON_3_13,
       handler: 'api.handler',
-      code: lambda.Code.fromAsset(path.join(__dirname, '../../backend')),
+      code: backendCode,
       timeout: Duration.seconds(10),
       memorySize: 256,
       environment: {
@@ -94,6 +116,8 @@ export class VeriBidStack extends Stack {
     records.grantReadWriteData(healthFunction);
     uploads.grantReadWrite(healthFunction);
     workflow.grantStartExecution(healthFunction);
+    records.grantReadWriteData(workerFunction);
+    uploads.grantReadWrite(workerFunction);
 
     const api = new apigwv2.HttpApi(this, 'HttpApi', {
       apiName: 'veribid-api',
@@ -140,6 +164,60 @@ export class VeriBidStack extends Stack {
     api.addRoutes({
       path: '/api/v1/evaluations/{evaluation_id}/documents/{document_id}/complete-upload',
       methods: [apigwv2.HttpMethod.POST],
+      integration: apiIntegration,
+      authorizer: cognitoAuthorizer,
+    });
+    api.addRoutes({
+      path: '/api/v1/evaluations/{evaluation_id}/requirements',
+      methods: [apigwv2.HttpMethod.GET],
+      integration: apiIntegration,
+      authorizer: cognitoAuthorizer,
+    });
+    api.addRoutes({
+      path: '/api/v1/evaluations/{evaluation_id}/requirements/extract',
+      methods: [apigwv2.HttpMethod.POST],
+      integration: apiIntegration,
+      authorizer: cognitoAuthorizer,
+    });
+    api.addRoutes({
+      path: '/api/v1/evaluations/{evaluation_id}/runs',
+      methods: [apigwv2.HttpMethod.POST],
+      integration: apiIntegration,
+      authorizer: cognitoAuthorizer,
+    });
+    api.addRoutes({
+      path: '/api/v1/evaluations/{evaluation_id}/runs/{run_id}',
+      methods: [apigwv2.HttpMethod.GET],
+      integration: apiIntegration,
+      authorizer: cognitoAuthorizer,
+    });
+    api.addRoutes({
+      path: '/api/v1/evaluations/{evaluation_id}/matrix',
+      methods: [apigwv2.HttpMethod.GET],
+      integration: apiIntegration,
+      authorizer: cognitoAuthorizer,
+    });
+    api.addRoutes({
+      path: '/api/v1/evaluations/{evaluation_id}/results/{evaluation_result_id}',
+      methods: [apigwv2.HttpMethod.GET],
+      integration: apiIntegration,
+      authorizer: cognitoAuthorizer,
+    });
+    api.addRoutes({
+      path: '/api/v1/evaluations/{evaluation_id}/results/{evaluation_result_id}/reviews',
+      methods: [apigwv2.HttpMethod.POST],
+      integration: apiIntegration,
+      authorizer: cognitoAuthorizer,
+    });
+    api.addRoutes({
+      path: '/api/v1/evaluations/{evaluation_id}/exports',
+      methods: [apigwv2.HttpMethod.POST],
+      integration: apiIntegration,
+      authorizer: cognitoAuthorizer,
+    });
+    api.addRoutes({
+      path: '/api/v1/evaluations/{evaluation_id}/exports/{export_id}',
+      methods: [apigwv2.HttpMethod.GET],
       integration: apiIntegration,
       authorizer: cognitoAuthorizer,
     });

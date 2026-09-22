@@ -14,10 +14,10 @@ Ship the contract-first VeriBid MVP as a real AWS-hosted application with a publ
 | M1 | Public frontend, API health, deployment foundation | HTTPS Amplify URL and API health route | PASS — live Amplify + API health/demo |
 | M2 | Cognito and Evaluation Workspace | Authenticated workspace creation and persistence | IN_PROGRESS — JWT routes and DDB persistence deployed |
 | M3 | Two-phase upload and ingestion | Private S3 upload, complete-upload verification, PDF/DOCX/XLSX metadata | IN_PROGRESS — presigned + HEAD verification deployed |
-| M4 | Requirement extraction and SourcePointers | Atomic typed requirements with buyer provenance | NOT_STARTED |
-| M5 | Vendor-scoped retrieval | Isolation tests for `vendor_id + proposal_id` | NOT_STARTED |
-| M6 | Specialists and deterministic tools | Technical/Commercial/Compliance routing and fixture calculations | NOT_STARTED |
-| M7 | Skeptical Verifier | Grounding, abstention, conflict-pair and schema-failure tests | NOT_STARTED |
+| M4 | Requirement extraction and SourcePointers | Atomic typed requirements with buyer provenance | IN_PROGRESS — typed models + worker extraction |
+| M5 | Vendor-scoped retrieval | Isolation tests for `vendor_id + proposal_id` | PASS — parser/domain scope guards |
+| M6 | Specialists and deterministic tools | Technical/Commercial/Compliance routing and fixture calculations | IN_PROGRESS — deterministic tools + worker path |
+| M7 | Skeptical Verifier | Grounding, abstention, conflict-pair and schema-failure tests | PASS — 10 backend tests |
 | M8 | Evidence Matrix | 3-vendor matrix and result detail UI | NOT_STARTED |
 | M9 | Human Review | Accept/override/follow-up with immutable system suggestion | NOT_STARTED |
 | M10 | Audit export | Markdown and PDF export from human-confirmed data | NOT_STARTED |

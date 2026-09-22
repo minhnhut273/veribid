@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Authenticator } from '@aws-amplify/ui-react';
 import { api, DemoDto, HealthDto } from './api';
 
 type Page = 'home' | 'demo' | 'app';
@@ -84,5 +85,19 @@ function StateBadge({ state, confidence }: { state: string; confidence: number }
 }
 
 function Workspace({ onBack }: { onBack: () => void }) {
-  return <main className="content workspace"><button className="back" onClick={onBack}>← Back to overview</button><div className="eyebrow">EVALUATION WORKSPACE</div><h1>Bring the evidence together.</h1><p className="lede">Sign-in and two-phase upload are being wired into this workspace. Your evaluation data will stay isolated by workspace, vendor, and proposal.</p><div className="workspace-card"><div className="upload-icon">↑</div><h2>Start with a buyer RFP</h2><p>PDF, DOCX, or XLSX. Upload is verified before ingestion begins.</p><button className="button-primary" disabled>Sign in to upload</button><small>Authentication is coming in the next deployed slice.</small></div></main>;
+  return <Authenticator loginMechanisms={['email']}>
+    {({ user, signOut }) => <AuthenticatedWorkspace userEmail={user?.signInDetails?.loginId ?? 'authenticated user'} onBack={onBack} onSignOut={signOut} />}
+  </Authenticator>;
+}
+
+function AuthenticatedWorkspace({ userEmail, onBack, onSignOut }: { userEmail: string; onBack: () => void; onSignOut?: () => void }) {
+  const [name, setName] = useState('Cloud platform procurement');
+  const [evaluationId, setEvaluationId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const create = async () => {
+    setError(null);
+    try { const result = await api.createEvaluation(name); setEvaluationId(result.data.evaluation_id); }
+    catch (reason) { setError(reason instanceof Error ? reason.message : 'Could not create evaluation'); }
+  };
+  return <main className="content workspace"><div className="workspace-nav"><button className="back" onClick={onBack}>← Back to overview</button><button className="button-quiet" onClick={() => onSignOut?.()}>Sign out</button></div><div className="eyebrow">EVALUATION WORKSPACE · {userEmail}</div><h1>Bring the evidence together.</h1><p className="lede">Create a private evaluation workspace. Documents will stay isolated by evaluation, vendor, proposal, and authenticated owner.</p><div className="workspace-card"><div className="upload-icon">↑</div><h2>Start with a buyer RFP</h2><p>PDF, DOCX, or XLSX. Upload is verified before ingestion begins.</p><label htmlFor="evaluation-name">Evaluation name</label><input id="evaluation-name" value={name} onChange={(event) => setName(event.target.value)} /><button className="button-primary" onClick={create}>Create evaluation</button>{evaluationId && <div className="created" role="status">Created <strong>{evaluationId}</strong>. Upload initialization is next.</div>}{error && <div className="form-error" role="alert">{error}</div>}</div></main>;
 }
