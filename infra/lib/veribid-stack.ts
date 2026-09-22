@@ -66,6 +66,7 @@ export class VeriBidStack extends Stack {
     const userPoolClient = userPool.addClient('WebClient', {
       generateSecret: false,
       authFlows: { userSrp: true },
+      disableOAuth: true,
       preventUserExistenceErrors: true,
       refreshTokenValidity: Duration.days(30),
     });
