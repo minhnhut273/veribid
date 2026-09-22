@@ -122,6 +122,8 @@ def _extract_requirements(event: dict[str, Any]) -> dict[str, Any]:
                 weight=10, evaluation_type=eval_type, threshold=threshold,
                 source_pointer=chunk["source_pointer"], validation_status="VALID",
             ))
+    if not requirements:
+        raise ValueError("no atomic buyer requirements could be extracted")
     with table.batch_writer() as batch:
         for requirement in requirements:
             batch.put_item(Item={"pk": f"EVAL#{evaluation_id}", "sk": f"REQ#{requirement.requirement_id}", "payload": requirement.model_dump(mode="json")})
@@ -141,6 +143,8 @@ def _evaluate(event: dict[str, Any]) -> dict[str, Any]:
         vendor_id, proposal_id = chunk.get("vendor_id"), chunk.get("proposal_id")
         if vendor_id and proposal_id and (not requested_vendors or vendor_id in requested_vendors):
             vendor_chunks.setdefault((vendor_id, proposal_id), []).append(chunk)
+    if not vendor_chunks:
+        raise ValueError("no vendor proposal evidence is available for evaluation")
     result_count = 0
     telemetry_totals = {"model_invocations": 0, "input_tokens": 0, "output_tokens": 0, "cache_read_input_tokens": 0, "cache_write_input_tokens": 0, "end_to_end_latency_ms": 0}
     bedrock = BedrockAdapter() if os.environ.get("BEDROCK_MODEL_ID") else None
@@ -195,6 +199,7 @@ def _evaluate(event: dict[str, Any]) -> dict[str, Any]:
                 result_count += 1
     telemetry = {**telemetry_totals, "cache_read_input_tokens": telemetry_totals["cache_read_input_tokens"] or None, "cache_write_input_tokens": telemetry_totals["cache_write_input_tokens"] or None}
     table.put_item(Item={"pk": f"EVAL#{evaluation_id}", "sk": f"RUN#{run_id}", "run_id": run_id, "status": "COMPLETED", "progress": {"total_items": result_count, "completed_items": result_count, "failed_items": 0}, "telemetry": telemetry, "updated_at": _now()})
+    table.update_item(Key={"pk": f"EVAL#{evaluation_id}", "sk": "META"}, UpdateExpression="SET #status = :status, updated_at = :at", ExpressionAttributeNames={"#status": "status"}, ExpressionAttributeValues={":status": "READY_FOR_REVIEW", ":at": _now()})
     table.update_item(Key={"pk": f"EVAL#{evaluation_id}", "sk": f"JOB#{run_id}"}, UpdateExpression="SET #status = :status, updated_at = :at", ExpressionAttributeNames={"#status": "status"}, ExpressionAttributeValues={":status": "COMPLETED", ":at": _now()})
     try:
         import boto3
