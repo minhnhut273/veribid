@@ -7,6 +7,7 @@ import os
 import re
 import tempfile
 from datetime import datetime, timezone
+from pathlib import PurePath
 from typing import Any
 from uuid import uuid4
 
@@ -56,7 +57,7 @@ def _ingest(event: dict[str, Any]) -> dict[str, Any]:
     if not document:
         raise ValueError("document not found")
     with tempfile.TemporaryDirectory() as directory:
-        path = os.path.join(directory, document["file_name"])
+        path = os.path.join(directory, PurePath(str(document["file_name"])).name)
         s3.download_file(os.environ["UPLOADS_BUCKET"], document["object_key"], path)
         chunks = parse_document(path, document_id, document["media_type"], document.get("vendor_id"), document.get("proposal_id"))
         with table.batch_writer() as batch:

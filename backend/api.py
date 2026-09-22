@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import os
+from pathlib import PurePath
 from datetime import datetime, timedelta, timezone
 from typing import Any
 from uuid import uuid4
@@ -30,6 +31,11 @@ EVALUATION_STATUSES = {
     "READY_FOR_EXPORT", "COMPLETED", "FAILED",
 }
 DOCUMENT_ROLES = {"BUYER_RFP", "BUYER_RUBRIC", "BUYER_POLICY", "VENDOR_PROPOSAL", "VENDOR_PRICING", "VENDOR_APPENDIX"}
+SUPPORTED_MEDIA_TYPES = {
+    "application/pdf",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+}
 
 
 def _now() -> str:
@@ -156,17 +162,31 @@ def _init_document(event: dict[str, Any], evaluation_id: str) -> dict[str, Any]:
     role = payload["document_role"]
     if role not in DOCUMENT_ROLES:
         return _error(400, "VALIDATION_ERROR", "Unsupported document_role", event, [{"field": "document_role", "reason": "ENUM"}])
+    if payload["media_type"] not in SUPPORTED_MEDIA_TYPES:
+        return _error(400, "VALIDATION_ERROR", "Only PDF, DOCX and XLSX uploads are supported", event, [{"field": "media_type", "reason": "UNSUPPORTED"}])
     vendor_id, proposal_id = payload.get("vendor_id"), payload.get("proposal_id")
     if (vendor_id is None) != (proposal_id is None):
         return _error(400, "VALIDATION_ERROR", "vendor_id and proposal_id must be supplied together", event, [{"field": "vendor_id/proposal_id", "reason": "PAIR_REQUIRED"}])
     table, s3, _ = _clients()
+    owner = _owner(event)
+    idem = event.get("headers", {}).get("idempotency-key") or event.get("headers", {}).get("Idempotency-Key")
+    if idem:
+        prior = table.get_item(Key=_idempotency(str(idem)), ConsistentRead=True).get("Item")
+        if prior and prior.get("owner_sub") == owner:
+            return _success(prior["response"], event, int(prior.get("status", 201)))
     document_id = f"DOC_{uuid4().hex[:16]}"
-    object_key = f"evaluations/{evaluation_id}/documents/{document_id}/{payload['file_name']}"
+    safe_file_name = PurePath(str(payload["file_name"])).name
+    if not safe_file_name or safe_file_name in {".", ".."}:
+        return _error(400, "VALIDATION_ERROR", "file_name is invalid", event, [{"field": "file_name", "reason": "INVALID"}])
+    object_key = f"evaluations/{evaluation_id}/documents/{document_id}/{safe_file_name}"
     expires_at = datetime.now(timezone.utc) + timedelta(minutes=15)
-    data = {"document_id": document_id, "evaluation_id": evaluation_id, "file_name": payload["file_name"], "media_type": payload["media_type"], "document_role": role, "vendor_id": vendor_id, "proposal_id": proposal_id, "ingestion_status": "AWAITING_UPLOAD", "object_key": object_key, "owner_sub": _owner(event), "created_at": _now()}
+    data = {"document_id": document_id, "evaluation_id": evaluation_id, "file_name": safe_file_name, "media_type": payload["media_type"], "document_role": role, "vendor_id": vendor_id, "proposal_id": proposal_id, "ingestion_status": "AWAITING_UPLOAD", "object_key": object_key, "owner_sub": owner, "created_at": _now()}
     table.put_item(Item={"pk": f"EVAL#{evaluation_id}", "sk": f"DOC#{document_id}", **data})
     url = s3.generate_presigned_url("put_object", Params={"Bucket": os.environ["UPLOADS_BUCKET"], "Key": object_key, "ContentType": payload["media_type"]}, ExpiresIn=900)
-    return _success({"document_id": document_id, "ingestion_status": "AWAITING_UPLOAD", "upload": {"method": "PUT", "url": url, "expires_at": expires_at.replace(microsecond=0).isoformat().replace("+00:00", "Z"), "required_headers": {"Content-Type": payload["media_type"]}}}, event, 201)
+    response_data = {"document_id": document_id, "ingestion_status": "AWAITING_UPLOAD", "upload": {"method": "PUT", "url": url, "expires_at": expires_at.replace(microsecond=0).isoformat().replace("+00:00", "Z"), "required_headers": {"Content-Type": payload["media_type"]}}}
+    if idem:
+        table.put_item(Item={**_idempotency(str(idem)), "owner_sub": owner, "response": response_data, "status": 201, "created_at": _now()})
+    return _success(response_data, event, 201)
 
 
 def _complete_document(event: dict[str, Any], evaluation_id: str, document_id: str) -> dict[str, Any]:
@@ -186,6 +206,10 @@ def _complete_document(event: dict[str, Any], evaluation_id: str, document_id: s
         return _error(422, "SOURCE_NOT_RESOLVABLE", "Uploaded object was not found; ingestion did not start", event)
     if head.get("ContentLength", 0) <= 0:
         return _error(422, "SOURCE_NOT_RESOLVABLE", "Uploaded object is empty; ingestion did not start", event)
+    expected_type = document.get("media_type")
+    actual_type = head.get("ContentType")
+    if expected_type and actual_type and actual_type != expected_type:
+        return _error(422, "SOURCE_NOT_RESOLVABLE", "Uploaded object content type does not match the initialized document", event, [{"field": "Content-Type", "reason": "MISMATCH"}])
     job_id = f"JOB_INGEST_{uuid4().hex[:16]}"
     table.update_item(Key=key, UpdateExpression="SET ingestion_status = :status, job_id = :job, verified_size = :size, verified_at = :at", ExpressionAttributeValues={":status": "PROCESSING", ":job": job_id, ":size": head.get("ContentLength"), ":at": _now()})
     if os.environ.get("STATE_MACHINE_ARN"):
