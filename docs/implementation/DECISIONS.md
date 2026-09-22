@@ -1,5 +1,8 @@
 # VeriBid Implementation Decisions
 
+> These are retained product-planning decisions. None is activated by the
+> repository-local agent-environment setup task.
+
 ## D-001 IaC mechanism
 
 Decision: use AWS CDK v2 with TypeScript as the single infrastructure-as-code mechanism.

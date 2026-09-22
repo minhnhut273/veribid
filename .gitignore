@@ -11,6 +11,8 @@ __pycache__/
 cdk.out/
 .amplify/
 .aws-sam/
+frontend/deploy.zip
+infra/synth-output.txt
 docs/submission-proof/*.png
 docs/submission-proof/*.jpg
 docs/submission-proof/*.jpeg

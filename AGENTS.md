@@ -52,4 +52,16 @@ AWS Agent Toolkit, AWS skills, MCP and AWS CLI are assumed to be configured alre
 
 Run the smallest relevant tests, configured static/type/lint checks and the affected acceptance criterion. Inspect the diff and never claim an unexecuted check passed. Completion reports state files changed, behavior, commands/results, unresolved risk or spec drift, and the next blocker.
 
-This task creates the repository-local agent environment only. Do not implement VeriBid product features as part of environment setup.
+## Implementation and Shipping Mode
+
+The repository is in implementation and shipping mode. The coding agent is authorized to implement application code, tests, infrastructure as code, CI/CD, AWS deployment, production validation, Git commits, and GitHub pushes required to ship the documented VeriBid MVP.
+
+Do not use this section to expand product scope beyond the authoritative MVP contracts.
+
+## Repository-Local Agent Harness
+
+- Treat `AGENTS.md`, `.agents/SOURCES.md`, `skills-lock.json` and the authoritative files under `Document/Phase_1/` as the agent's local operating contract.
+- Before changing the harness, run `python scripts/check_agent_harness.py` from the repository root. The check is standard-library-only and must remain runnable before an application package exists.
+- Preserve the project-local skill bundle. Use `scripts/setup-agent-skills.sh` only when a skill is missing; it must not install AWS tooling, credentials or global dependencies.
+- Record harness adoption and verification in `docs/harness/adoption-report.md`. Record a new failure under `docs/failures/` only when it is repository-relevant, user-visible or likely to recur, and include its detection/prevention point.
+- Keep the product roadmap in `docs/implementation/` synchronized with the implementation and deployment state.

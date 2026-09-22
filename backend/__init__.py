@@ -1,0 +1,1 @@
+"""VeriBid Lambda application package."""

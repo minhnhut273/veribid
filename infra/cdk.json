@@ -1,0 +1,8 @@
+{
+  "app": "npx tsx bin/veribid.ts",
+  "context": {
+    "@aws-cdk/aws-apigateway:usagePlanKeyOrderInsensitive": true,
+    "@aws-cdk/core:checkSecretUsage": true,
+    "@aws-cdk/core:target-partitions": "aws"
+  }
+}

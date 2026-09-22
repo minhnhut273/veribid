@@ -1,5 +1,7 @@
 # VeriBid MVP Execution Plan
 
+> Execution ledger: statuses below are evidence-backed implementation state.
+
 ## Goal
 
 Ship the contract-first VeriBid MVP as a real AWS-hosted application with a public read-only demo, authenticated workspace workflow, evidence-grounded evaluation, Human Review, deterministic export, tested deployment, and submission proof.
@@ -8,10 +10,10 @@ Ship the contract-first VeriBid MVP as a real AWS-hosted application with a publ
 
 | ID | Milestone | Exit evidence | Status |
 |---|---|---|---|
-| M0 | Repository and infrastructure foundation | GitHub remote, CI skeleton, IaC project, implementation ledger | IN_PROGRESS |
-| M1 | Public frontend, API health, deployment foundation | HTTPS Amplify URL and API health route | NOT_STARTED |
-| M2 | Cognito and Evaluation Workspace | Authenticated workspace creation and persistence | NOT_STARTED |
-| M3 | Two-phase upload and ingestion | Private S3 upload, complete-upload verification, PDF/DOCX/XLSX metadata | NOT_STARTED |
+| M0 | Repository and infrastructure foundation | GitHub remote, CI skeleton, IaC project, implementation ledger | PASS — GitHub + CDK foundation |
+| M1 | Public frontend, API health, deployment foundation | HTTPS Amplify URL and API health route | PASS — live Amplify + API health/demo |
+| M2 | Cognito and Evaluation Workspace | Authenticated workspace creation and persistence | IN_PROGRESS — JWT routes and DDB persistence deployed |
+| M3 | Two-phase upload and ingestion | Private S3 upload, complete-upload verification, PDF/DOCX/XLSX metadata | IN_PROGRESS — presigned + HEAD verification deployed |
 | M4 | Requirement extraction and SourcePointers | Atomic typed requirements with buyer provenance | NOT_STARTED |
 | M5 | Vendor-scoped retrieval | Isolation tests for `vendor_id + proposal_id` | NOT_STARTED |
 | M6 | Specialists and deterministic tools | Technical/Commercial/Compliance routing and fixture calculations | NOT_STARTED |
