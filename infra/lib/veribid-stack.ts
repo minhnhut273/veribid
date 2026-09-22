@@ -18,6 +18,9 @@ export class VeriBidStack extends Stack {
   constructor(scope: Construct, id: string, props?: StackProps) {
     super(scope, id, props);
 
+    const bedrockModelId = this.node.tryGetContext('bedrockModelId') as string | undefined;
+    const bedrockModelArn = this.node.tryGetContext('bedrockModelArn') as string | undefined;
+
     const uploads = new s3.Bucket(this, 'UploadsBucket', {
       encryption: s3.BucketEncryption.S3_MANAGED,
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
@@ -83,8 +86,17 @@ export class VeriBidStack extends Stack {
       environment: {
         TABLE_NAME: records.tableName,
         UPLOADS_BUCKET: uploads.bucketName,
+        BEDROCK_MODEL_ID: bedrockModelId ?? '',
+        PROMPT_CACHE_ENABLED: 'false',
       },
     });
+
+    if (bedrockModelArn) {
+      workerFunction.addToRolePolicy(new iam.PolicyStatement({
+        actions: ['bedrock:Converse', 'bedrock:InvokeModel'],
+        resources: [bedrockModelArn],
+      }));
+    }
 
     const workflow = new sfn.StateMachine(this, 'EvaluationStateMachine', {
       stateMachineName: 'veribid-evaluation',
@@ -118,6 +130,11 @@ export class VeriBidStack extends Stack {
     workflow.grantStartExecution(healthFunction);
     records.grantReadWriteData(workerFunction);
     uploads.grantReadWrite(workerFunction);
+    workerFunction.addToRolePolicy(new iam.PolicyStatement({
+      actions: ['cloudwatch:PutMetricData'],
+      resources: ['*'],
+      conditions: { StringEquals: { 'cloudwatch:namespace': 'VeriBid' } },
+    }));
 
     const api = new apigwv2.HttpApi(this, 'HttpApi', {
       apiName: 'veribid-api',

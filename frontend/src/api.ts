@@ -14,6 +14,7 @@ export type DemoDto = {
 };
 
 export type EvaluationDto = { evaluation_id: string; name: string; status: string; created_at: string };
+export type UploadInitDto = { document_id: string; ingestion_status: string; upload: { method: 'PUT'; url: string; expires_at: string; required_headers: { 'Content-Type': string } } };
 
 const baseUrl = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.replace(/\/$/, '') ?? '';
 
@@ -37,4 +38,6 @@ export const api = {
   health: () => request<HealthDto>('/api/v1/health'),
   demo: () => request<DemoDto>('/api/v1/demo'),
   createEvaluation: (name: string) => request<{ data: EvaluationDto }>('/api/v1/evaluations', { method: 'POST', headers: { 'content-type': 'application/json', 'idempotency-key': crypto.randomUUID() }, body: JSON.stringify({ name }) }, true),
+  initializeDocument: (evaluationId: string, file: File) => request<{ data: UploadInitDto }>(`/api/v1/evaluations/${evaluationId}/documents`, { method: 'POST', headers: { 'content-type': 'application/json', 'idempotency-key': crypto.randomUUID() }, body: JSON.stringify({ file_name: file.name, media_type: file.type || 'application/octet-stream', document_role: 'BUYER_RFP' }) }, true),
+  completeDocument: (evaluationId: string, documentId: string) => request<{ data: { document_id: string; ingestion_status: string; job_id: string } }>(`/api/v1/evaluations/${evaluationId}/documents/${documentId}/complete-upload`, { method: 'POST', headers: { 'content-type': 'application/json', 'idempotency-key': crypto.randomUUID() }, body: '{}' }, true),
 };

@@ -93,11 +93,23 @@ function Workspace({ onBack }: { onBack: () => void }) {
 function AuthenticatedWorkspace({ userEmail, onBack, onSignOut }: { userEmail: string; onBack: () => void; onSignOut?: () => void }) {
   const [name, setName] = useState('Cloud platform procurement');
   const [evaluationId, setEvaluationId] = useState<string | null>(null);
+  const [uploadStatus, setUploadStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const create = async () => {
     setError(null);
     try { const result = await api.createEvaluation(name); setEvaluationId(result.data.evaluation_id); }
     catch (reason) { setError(reason instanceof Error ? reason.message : 'Could not create evaluation'); }
   };
-  return <main className="content workspace"><div className="workspace-nav"><button className="back" onClick={onBack}>← Back to overview</button><button className="button-quiet" onClick={() => onSignOut?.()}>Sign out</button></div><div className="eyebrow">EVALUATION WORKSPACE · {userEmail}</div><h1>Bring the evidence together.</h1><p className="lede">Create a private evaluation workspace. Documents will stay isolated by evaluation, vendor, proposal, and authenticated owner.</p><div className="workspace-card"><div className="upload-icon">↑</div><h2>Start with a buyer RFP</h2><p>PDF, DOCX, or XLSX. Upload is verified before ingestion begins.</p><label htmlFor="evaluation-name">Evaluation name</label><input id="evaluation-name" value={name} onChange={(event) => setName(event.target.value)} /><button className="button-primary" onClick={create}>Create evaluation</button>{evaluationId && <div className="created" role="status">Created <strong>{evaluationId}</strong>. Upload initialization is next.</div>}{error && <div className="form-error" role="alert">{error}</div>}</div></main>;
+  const upload = async (file: File) => {
+    if (!evaluationId) return;
+    setError(null); setUploadStatus('Preparing a verified upload…');
+    try {
+      const initialized = await api.initializeDocument(evaluationId, file);
+      const uploadResponse = await fetch(initialized.data.upload.url, { method: 'PUT', headers: initialized.data.upload.required_headers, body: file });
+      if (!uploadResponse.ok) throw new Error(`S3 upload failed (${uploadResponse.status})`);
+      const completed = await api.completeDocument(evaluationId, initialized.data.document_id);
+      setUploadStatus(`Verified and queued: ${completed.data.job_id}`);
+    } catch (reason) { setError(reason instanceof Error ? reason.message : 'Upload failed'); setUploadStatus(null); }
+  };
+  return <main className="content workspace"><div className="workspace-nav"><button className="back" onClick={onBack}>← Back to overview</button><button className="button-quiet" onClick={() => onSignOut?.()}>Sign out</button></div><div className="eyebrow">EVALUATION WORKSPACE · {userEmail}</div><h1>Bring the evidence together.</h1><p className="lede">Create a private evaluation workspace. Documents stay isolated by evaluation, vendor, proposal, and authenticated owner.</p><div className="workspace-card"><div className="upload-icon">↑</div><h2>Start with a buyer RFP</h2><p>PDF, DOCX, or XLSX. The object is verified before ingestion begins.</p>{!evaluationId ? <><label htmlFor="evaluation-name">Evaluation name</label><input id="evaluation-name" value={name} onChange={(event) => setName(event.target.value)} /><button className="button-primary" onClick={create}>Create evaluation</button></> : <><div className="created" role="status">Workspace <strong>{evaluationId}</strong></div><label className="file-label" htmlFor="buyer-file">Choose RFP</label><input id="buyer-file" type="file" accept=".pdf,.docx,.xlsx" onChange={(event) => { const file = event.target.files?.[0]; if (file) void upload(file); }} />{uploadStatus && <div className="upload-status" role="status">{uploadStatus}</div>}</>}{error && <div className="form-error" role="alert">{error}</div>}</div></main>;
 }

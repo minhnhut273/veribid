@@ -21,6 +21,19 @@ except ImportError:  # Lambda handler modules are loaded from the asset root.
     from ingestion import parse_document  # type: ignore
     from verifier import new_conflict_pair, verify_candidate  # type: ignore
 
+try:
+    from .bedrock_adapter import BedrockAdapter
+except ImportError:
+    from bedrock_adapter import BedrockAdapter  # type: ignore
+
+from pydantic import BaseModel
+
+
+class SpecialistOutput(BaseModel):
+    state: EvaluationState
+    score: float | None = None
+    rationale: str
+
 
 def _now() -> str:
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
@@ -99,6 +112,8 @@ def _evaluate(event: dict[str, Any]) -> dict[str, Any]:
         if vendor_id and proposal_id:
             vendor_chunks.setdefault((vendor_id, proposal_id), []).append(chunk)
     result_count = 0
+    telemetry_totals = {"model_invocations": 0, "input_tokens": 0, "output_tokens": 0, "cache_read_input_tokens": 0, "cache_write_input_tokens": 0, "end_to_end_latency_ms": 0}
+    bedrock = BedrockAdapter() if os.environ.get("BEDROCK_MODEL_ID") else None
     with table.batch_writer() as batch:
         for requirement in requirements:
             for (vendor_id, proposal_id), scoped_chunks in vendor_chunks.items():
@@ -124,13 +139,42 @@ def _evaluate(event: dict[str, Any]) -> dict[str, Any]:
                 evidence_claims = [EvidenceClaim(evidence_claim_id=f"EVC_{uuid4().hex[:16]}", **claim) for claim in claims]
                 if len(evidence_claims) >= 2 and any(claim.relation == "supports" for claim in evidence_claims) and any(claim.relation == "contradicts" for claim in evidence_claims):
                     conflict_pairs = [new_conflict_pair(evidence_claims[0].evidence_claim_id, evidence_claims[1].evidence_claim_id, "DATA_RESIDENCY")]
-                result = verify_candidate(evaluation_result_id=f"EVAL_{uuid4().hex[:16]}", requirement_id=requirement.requirement_id, vendor_id=vendor_id, proposal_id=proposal_id, suggested_state=EvaluationState.SATISFIED if evidence_claims else EvaluationState.INSUFFICIENT_EVIDENCE, suggested_score=10 if evidence_claims else None, max_score=10, rationale="Deterministic or source-grounded fixture evaluation.", claims=evidence_claims, conflict_pairs=conflict_pairs, deterministic_result=deterministic)
+                suggested_state = EvaluationState.SATISFIED if evidence_claims else EvaluationState.INSUFFICIENT_EVIDENCE
+                suggested_score = 10 if evidence_claims else None
+                rationale = "Deterministic or source-grounded fixture evaluation."
+                if bedrock and requirement.evaluation_type is EvaluationType.SEMANTIC and not conflict_pairs and evidence_claims:
+                    specialist, specialist_telemetry = bedrock.converse_json(
+                        system_prompt="Return only the typed JSON assessment. Never invent evidence and abstain when the supplied source claims are insufficient.",
+                        user_prompt=json.dumps({"requirement": requirement.description, "vendor_id": vendor_id, "proposal_id": proposal_id, "claims": [claim.model_dump(mode="json") for claim in evidence_claims]}, sort_keys=True),
+                        output_model=SpecialistOutput,
+                        static_context="VeriBid canonical states: SATISFIED, PARTIALLY_SATISFIED, NOT_SATISFIED, CONFLICTING_EVIDENCE, INSUFFICIENT_EVIDENCE.",
+                        max_tokens=256,
+                        enable_cache=os.environ.get("PROMPT_CACHE_ENABLED") == "true",
+                        repair=lambda text: "Repair the previous output into JSON with exactly state, score, rationale fields. Output JSON only.",
+                    )
+                    suggested_state, suggested_score, rationale = specialist.state, specialist.score, specialist.rationale
+                    for key in telemetry_totals:
+                        value = getattr(specialist_telemetry, key)
+                        if value is not None:
+                            telemetry_totals[key] += value
+                result = verify_candidate(evaluation_result_id=f"EVAL_{uuid4().hex[:16]}", requirement_id=requirement.requirement_id, vendor_id=vendor_id, proposal_id=proposal_id, suggested_state=suggested_state, suggested_score=suggested_score, max_score=10, rationale=rationale, claims=evidence_claims, conflict_pairs=conflict_pairs, deterministic_result=deterministic)
                 result_id = result.evaluation_result_id
                 batch.put_item(Item={"pk": f"EVAL#{evaluation_id}", "sk": f"RES#{result_id}", "run_id": run_id, "payload": result.model_dump(mode="json")})
                 result_count += 1
-    telemetry = {"model_invocations": 0, "input_tokens": 0, "output_tokens": 0, "cache_read_input_tokens": None, "cache_write_input_tokens": None, "end_to_end_latency_ms": 0}
+    telemetry = {**telemetry_totals, "cache_read_input_tokens": telemetry_totals["cache_read_input_tokens"] or None, "cache_write_input_tokens": telemetry_totals["cache_write_input_tokens"] or None}
     table.put_item(Item={"pk": f"EVAL#{evaluation_id}", "sk": f"RUN#{run_id}", "run_id": run_id, "status": "COMPLETED", "progress": {"total_items": result_count, "completed_items": result_count, "failed_items": 0}, "telemetry": telemetry, "updated_at": _now()})
     table.update_item(Key={"pk": f"EVAL#{evaluation_id}", "sk": f"JOB#{run_id}"}, UpdateExpression="SET #status = :status, updated_at = :at", ExpressionAttributeNames={"#status": "status"}, ExpressionAttributeValues={":status": "COMPLETED", ":at": _now()})
+    try:
+        import boto3
+        boto3.client("cloudwatch").put_metric_data(Namespace="VeriBid", MetricData=[
+            {"MetricName": "RunCompleted", "Value": 1, "Unit": "Count"},
+            {"MetricName": "ModelInvocations", "Value": telemetry["model_invocations"], "Unit": "Count"},
+            {"MetricName": "CacheReadInputTokens", "Value": telemetry["cache_read_input_tokens"] or 0, "Unit": "Count"},
+            {"MetricName": "CacheWriteInputTokens", "Value": telemetry["cache_write_input_tokens"] or 0, "Unit": "Count"},
+        ])
+    except Exception:
+        # Metrics must not convert a completed evaluation into an execution failure.
+        pass
     return {"run_id": run_id, "status": "COMPLETED", "result_count": result_count, "telemetry": telemetry}
 
 
