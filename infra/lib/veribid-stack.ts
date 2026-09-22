@@ -273,7 +273,7 @@ export class VeriBidStack extends Stack {
         { name: 'VITE_USER_POOL_CLIENT_ID', value: userPoolClient.userPoolClientId },
       ],
       customRules: [{
-        source: '/<*>',
+        source: '</^[^.]+$|\\.(?!(css|gif|ico|jpg|js|png|txt|svg|woff|woff2|ttf|map|json|webp)$)([^.]+$)/>',
         target: '/index.html',
         status: '200',
       }],
