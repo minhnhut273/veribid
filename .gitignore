@@ -1,0 +1,26 @@
+node_modules/
+dist/
+build/
+coverage/
+.venv/
+__pycache__/
+*.pyc
+.env
+.env.*
+!.env.example
+cdk.out/
+.amplify/
+.aws-sam/
+docs/submission-proof/*.png
+docs/submission-proof/*.jpg
+docs/submission-proof/*.jpeg
+docs/submission-proof/*.mp4
+*.pem
+*.key
+*.p12
+*.secret
+*.token
+*.log
+
+# Local Codex runtime logs
+.codex-log/
