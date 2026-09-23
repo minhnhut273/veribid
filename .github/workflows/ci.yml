@@ -37,6 +37,9 @@ jobs:
           npm run test
       - name: Infrastructure checks
         working-directory: infra
+        env:
+          CDK_DEFAULT_ACCOUNT: '522346104596'
+          CDK_DEFAULT_REGION: us-east-1
         run: |
           npm ci
           npm run build
