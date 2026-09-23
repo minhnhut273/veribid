@@ -31,5 +31,5 @@ The pushed implementation commit `fed4986` passed GitHub Actions run
 [`35807611863`](https://github.com/minhnhut273/veribid/actions/runs/35807611863)
 with backend, frontend and infrastructure checks. The static security review
 is recorded in `SECURITY_REVIEW.md`; it found no critical/high/medium code
-finding, with Python CVE database tooling and deployment-identity hardening
-remaining as explicit INFO items.
+finding and the Python dependency audit is clean. Least-privilege deployment
+identity hardening remains the explicit INFO item.

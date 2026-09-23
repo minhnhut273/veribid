@@ -6,14 +6,15 @@
 | HIGH | 0 |
 | MEDIUM | 0 |
 | LOW | 0 |
-| INFO | 2 |
-| **Total** | **2** |
+| INFO | 1 |
+| **Total** | **1** |
 
 Scan date: 2026-09-23. Scope: backend Python handlers/parsers/worker,
 frontend React/TypeScript, CDK/IAM, CI and lockfiles. Dependency audit:
 `npm audit --audit-level=high --omit=optional` returned zero vulnerabilities
-for both frontend and infra. `pip-audit` was not installed; pinned Python
-requirements were inspected and this limitation remains explicit.
+for both frontend and infra. `pip-audit -r backend/requirements.txt` returned
+no known vulnerabilities after upgrading `pypdf` to `6.16.1`; the updated
+worker asset was redeployed successfully.
 
 ## Security controls verified
 
@@ -34,10 +35,7 @@ requirements were inspected and this limitation remains explicit.
 
 ## INFO findings
 
-1. `pip-audit` is unavailable in the local environment, so a live Python CVE
-   database check could not be executed. Run it in CI before a production
-   release.
-2. The configured AWS deployment identity was the account root identity during
+1. The configured AWS deployment identity was the account root identity during
    the foundation deployment. This is a release-hardening risk outside the
    application code; replace it with a least-privilege deployment identity
    before handling real supplier documents.
