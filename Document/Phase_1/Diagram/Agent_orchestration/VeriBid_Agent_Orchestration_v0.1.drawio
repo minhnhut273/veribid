@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <mxfile host="app.diagrams.net" modified="2026-09-22T16:00:00.000Z" agent="ChatGPT" version="24.7.17" type="device">
   <diagram id="veribid-agent-orchestration" name="Agent Orchestration">
-    <mxGraphModel dx="1420" dy="980" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="1440" math="0" shadow="0">
+    <mxGraphModel dx="1420" dy="980" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="1500" math="0" shadow="0">
       <root>
         <mxCell id="0"/>
         <mxCell id="1" parent="0"/>
@@ -18,7 +18,7 @@
           <mxGeometry as="geometry" x="520" y="300" width="560" height="82"/>
         </mxCell>
         <mxCell id="stable" value="&lt;b&gt;Stable Context /&lt;br&gt;Cached Prefix&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:12px&quot;&gt;RFP requirements&lt;br&gt;Scoring rubric&lt;br&gt;Shared evaluation policy&lt;br&gt;Bedrock Prompt Caching&lt;br&gt;= inference-time behavior&lt;/font&gt;" style="whiteSpace=wrap;html=1;rounded=1;fillColor=#F4F6F8;strokeColor=#0F6B78;strokeWidth=1.5;fontColor=#1F2937;fontSize=14;fontStyle=1;align=center;verticalAlign=middle;spacing=8;dashed=1;dashPattern=6 4;" vertex="1" parent="1">
-          <mxGeometry as="geometry" x="40" y="225" width="360" height="180"/>
+          <mxGeometry as="geometry" x="40" y="215" width="360" height="210"/>
         </mxCell>
         <mxCell id="tech" value="&lt;b&gt;Technical Evaluator&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:12px&quot;&gt;Architecture • Integration&lt;br&gt;SLA • Performance&lt;/font&gt;" style="whiteSpace=wrap;html=1;rounded=1;fillColor=#DCEAF7;strokeColor=#17365D;strokeWidth=1.5;fontColor=#17365D;fontSize=15;fontStyle=1;align=center;verticalAlign=middle;spacing=8;" vertex="1" parent="1">
           <mxGeometry as="geometry" x="250" y="440" width="300" height="105"/>
@@ -42,10 +42,10 @@
           <mxGeometry as="geometry" x="430" y="1020" width="740" height="92"/>
         </mxCell>
         <mxCell id="human" value="&lt;b&gt;Human Review&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:12px&quot;&gt;ACCEPT • OVERRIDE • REQUEST_FOLLOWUP&lt;br&gt;Override rationale required&lt;/font&gt;" style="whiteSpace=wrap;html=1;rounded=1;fillColor=#FBE8D4;strokeColor=#17365D;strokeWidth=1.5;fontColor=#17365D;fontSize=15;fontStyle=1;align=center;verticalAlign=middle;spacing=8;" vertex="1" parent="1">
-          <mxGeometry as="geometry" x="550" y="1140" width="500" height="95"/>
+          <mxGeometry as="geometry" x="550" y="1140" width="500" height="115"/>
         </mxCell>
         <mxCell id="audit" value="&lt;b&gt;Auditable Decision Trace&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:12px&quot;&gt;Preserve system suggestion + HumanReview + AuditEvent&lt;/font&gt;" style="whiteSpace=wrap;html=1;rounded=1;fillColor=#F4F6F8;strokeColor=#0F6B78;strokeWidth=1.5;fontColor=#17365D;fontSize=14;fontStyle=1;align=center;verticalAlign=middle;spacing=8;" vertex="1" parent="1">
-          <mxGeometry as="geometry" x="550" y="1260" width="500" height="80"/>
+          <mxGeometry as="geometry" x="550" y="1280" width="500" height="80"/>
         </mxCell>
         <mxCell id="e1" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#17365D;strokeWidth=2;endArrow=block;endFill=1;" edge="1" parent="1" source="work" target="retrieval">
           <mxGeometry as="geometry" relative="1"/>
@@ -108,7 +108,7 @@
           <mxGeometry as="geometry" relative="1"/>
         </mxCell>
         <mxCell id="note" value="&lt;b&gt;Key rule:&lt;/b&gt; the three specialists are routing targets, not three votes. A requirement is routed to the appropriate specialist; any machine-evaluable checks are delegated to deterministic tools; every specialist result is gated by the Skeptical Verifier before human review." style="whiteSpace=wrap;html=1;rounded=1;fillColor=#FFFFFF;strokeColor=#FFFFFF;strokeWidth=1.5;fontColor=#667085;fontSize=12;fontStyle=0;align=left;verticalAlign=middle;spacing=8;" vertex="1" parent="1">
-          <mxGeometry as="geometry" x="280" y="1360" width="1040" height="55"/>
+          <mxGeometry as="geometry" x="280" y="1390" width="1040" height="70"/>
         </mxCell>
       </root>
     </mxGraphModel>

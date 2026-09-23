@@ -1,33 +1,45 @@
 <mxfile host="app.diagrams.net" modified="2026-09-22T16:00:00.000Z" agent="ChatGPT" version="24.7.17" type="device">
   <diagram id="veribid-data-evidence" name="Data Evidence Model">
-    <mxGraphModel dx="1422" dy="794" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" math="0" shadow="0">
+    <mxGraphModel dx="1422" dy="1100" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="1240" math="0" shadow="0">
       <root>
         <mxCell id="0"/>
         <mxCell id="1" parent="0"/>
-        <mxCell id="title" value="&lt;b&gt;VeriBid — Data / Evidence Model&lt;/b&gt;&lt;br&gt;&lt;font size=&quot;12&quot;&gt;Core Traceability Contract&lt;/font&gt;" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=24;fontColor=#17365D;" vertex="1" parent="1">
+        <mxCell id="title" value="&lt;b&gt;VeriBid — Data / Evidence Model&lt;/b&gt;&lt;br&gt;&lt;font size=&quot;12&quot;&gt;Canonical Traceability Contract&lt;/font&gt;" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=24;fontColor=#17365D;" vertex="1" parent="1">
           <mxGeometry x="255" y="20" width="660" height="60" as="geometry"/>
         </mxCell>
         <mxCell id="req" value="&lt;b&gt;Requirement&lt;/b&gt;&lt;br&gt;&lt;font size=&quot;11&quot;&gt;Buyer-side criterion / root anchor&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=16;fillColor=#D9EAF7;strokeColor=#2F75B5;strokeWidth=2;fontSize=18;fontColor=#17365D;align=center;verticalAlign=middle;" vertex="1" parent="1">
           <mxGeometry x="335" y="105" width="500" height="82" as="geometry"/>
         </mxCell>
+        <mxCell id="context" value="&lt;b&gt;Vendor + Proposal&lt;/b&gt;&lt;br&gt;&lt;font size=&quot;11&quot;&gt;Isolated evaluation context: vendor_id + proposal_id&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=16;fillColor=#E4F0F0;strokeColor=#0F6B78;strokeWidth=2;fontSize=18;fontColor=#17365D;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="335" y="225" width="500" height="82" as="geometry"/>
+        </mxCell>
         <mxCell id="evc" value="&lt;b&gt;EvidenceClaim&lt;/b&gt;&lt;br&gt;&lt;font size=&quot;11&quot;&gt;Normalized vendor evidence + semantic relation&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=16;fillColor=#E2F0D9;strokeColor=#70AD47;strokeWidth=2;fontSize=18;fontColor=#17365D;align=center;verticalAlign=middle;" vertex="1" parent="1">
-          <mxGeometry x="335" y="245" width="500" height="82" as="geometry"/>
+          <mxGeometry x="335" y="345" width="500" height="82" as="geometry"/>
         </mxCell>
         <mxCell id="ptr" value="&lt;b&gt;SourcePointer&lt;/b&gt;&lt;br&gt;&lt;font size=&quot;11&quot;&gt;Resolvable locator back to the original document&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=16;fillColor=#FFF2CC;strokeColor=#BF9000;strokeWidth=2;fontSize=18;fontColor=#17365D;align=center;verticalAlign=middle;" vertex="1" parent="1">
-          <mxGeometry x="335" y="385" width="500" height="82" as="geometry"/>
+          <mxGeometry x="335" y="465" width="500" height="82" as="geometry"/>
+        </mxCell>
+        <mxCell id="verify" value="&lt;b&gt;Verification&lt;/b&gt;&lt;br&gt;&lt;font size=&quot;11&quot;&gt;Resolve source, test support, detect conflict and abstention&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=16;fillColor=#FCE4D6;strokeColor=#C0504D;strokeWidth=2;fontSize=18;fontColor=#17365D;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="335" y="585" width="500" height="82" as="geometry"/>
         </mxCell>
         <mxCell id="eval" value="&lt;b&gt;EvaluationResult&lt;/b&gt;&lt;br&gt;&lt;font size=&quot;11&quot;&gt;Verified state, score, conflicts and deterministic result&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=16;fillColor=#FCE4D6;strokeColor=#ED7D31;strokeWidth=2;fontSize=18;fontColor=#17365D;align=center;verticalAlign=middle;" vertex="1" parent="1">
-          <mxGeometry x="335" y="525" width="500" height="82" as="geometry"/>
+          <mxGeometry x="335" y="705" width="500" height="82" as="geometry"/>
         </mxCell>
         <mxCell id="human" value="&lt;b&gt;HumanReview&lt;/b&gt;&lt;br&gt;&lt;font size=&quot;11&quot;&gt;Accept / Override / Request Follow-up&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=16;fillColor=#E4DFEC;strokeColor=#8064A2;strokeWidth=2;fontSize=18;fontColor=#17365D;align=center;verticalAlign=middle;" vertex="1" parent="1">
-          <mxGeometry x="335" y="665" width="500" height="82" as="geometry"/>
+          <mxGeometry x="335" y="825" width="500" height="82" as="geometry"/>
         </mxCell>
-        <mxCell id="e1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5B6573;strokeWidth=2;" edge="1" parent="1" source="req" target="evc"><mxGeometry relative="1" as="geometry"/></mxCell>
-        <mxCell id="e2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5B6573;strokeWidth=2;" edge="1" parent="1" source="evc" target="ptr"><mxGeometry relative="1" as="geometry"/></mxCell>
-        <mxCell id="e3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5B6573;strokeWidth=2;" edge="1" parent="1" source="ptr" target="eval"><mxGeometry relative="1" as="geometry"/></mxCell>
-        <mxCell id="e4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5B6573;strokeWidth=2;" edge="1" parent="1" source="eval" target="human"><mxGeometry relative="1" as="geometry"/></mxCell>
-        <mxCell id="note" value="&lt;b&gt;Canonical implementation trace&lt;/b&gt;&lt;br&gt;Requirement → Vendor + Proposal → EvidenceClaim → SourcePointer → Verification → EvaluationResult → HumanReview → AuditEvent" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F3F6F9;strokeColor=#A6A6A6;dashed=1;dashPattern=4 4;fontSize=12;fontColor=#44546A;align=left;verticalAlign=middle;spacingLeft=14;spacingRight=12;" vertex="1" parent="1">
-          <mxGeometry x="175" y="780" width="820" height="78" as="geometry"/>
+        <mxCell id="audit" value="&lt;b&gt;AuditEvent&lt;/b&gt;&lt;br&gt;&lt;font size=&quot;11&quot;&gt;Append-only decision history and reviewer rationale&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=16;fillColor=#F3F6F9;strokeColor=#667085;strokeWidth=2;fontSize=18;fontColor=#17365D;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="335" y="945" width="500" height="82" as="geometry"/>
+        </mxCell>
+        <mxCell id="e1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5B6573;strokeWidth=2;" edge="1" parent="1" source="req" target="context"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e2" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5B6573;strokeWidth=2;" edge="1" parent="1" source="context" target="evc"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e3" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5B6573;strokeWidth=2;" edge="1" parent="1" source="evc" target="ptr"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e4" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5B6573;strokeWidth=2;" edge="1" parent="1" source="ptr" target="verify"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e5" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5B6573;strokeWidth=2;" edge="1" parent="1" source="verify" target="eval"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e6" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5B6573;strokeWidth=2;" edge="1" parent="1" source="eval" target="human"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e7" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5B6573;strokeWidth=2;" edge="1" parent="1" source="human" target="audit"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="note" value="&lt;b&gt;Invariant:&lt;/b&gt; user-visible factual assessments require a resolvable SourcePointer; unresolved or material conflicts remain explicit." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F3F6F9;strokeColor=#A6A6A6;dashed=1;dashPattern=4 4;fontSize=12;fontColor=#44546A;align=left;verticalAlign=middle;spacingLeft=14;spacingRight=12;" vertex="1" parent="1">
+          <mxGeometry x="175" y="1065" width="820" height="78" as="geometry"/>
         </mxCell>
       </root>
     </mxGraphModel>
