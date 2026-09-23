@@ -20,6 +20,11 @@ Inline explanatory diagrams are ready as `assets/dual_path.png` and
 `assets/aws_architecture.png`; they are diagrams, not product or AWS Console
 screenshots.
 
+The saved Builder body uses nine visible links to the committed PNG
+illustrations. External Markdown image syntax was rejected by Builder during
+draft save, and the native file picker was not exposed by the available
+browser automation surface; no inline image rendering is claimed.
+
 ## Links
 
 - Live app: https://main.d2jw7e2fbiu6od.amplifyapp.com/

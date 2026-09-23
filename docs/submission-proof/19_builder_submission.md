@@ -18,17 +18,21 @@ Inspection and draft population performed 2026-09-23 in the correct Chrome profi
   product summary.
 - Content: populated in Markdown mode with the reviewed storytelling article,
   architecture, development episodes, narrow cache claim, commercial path,
-  MVP boundaries, live/demo/repository links, tags, and links to the two
-  repository-hosted explanatory PNG diagrams.
+  MVP boundaries, live/demo/repository links, tags, and nine repository-hosted
+  PNG illustration links (cover, conflict, matrix, abstention, dual path,
+  AWS architecture, coding-agent delivery, cache telemetry, and review/export).
 - Tags selected in Builder: `commercial-potential`, `startups`, `ai`,
   `serverless`, `amazon-bedrock-agents`.
 - Live demo URL: `https://main.d2jw7e2fbiu6od.amplifyapp.com/demo`.
 - Repository URL: `https://github.com/minhnhut273/veribid`.
 - Cover and inline product screenshots: not uploaded; the current repository
-  package records those assets as blocked until real redacted captures exist.
-- Inline diagram rendering: the preview visibly rendered the article
-  hierarchy, text, links and tags; image rendering is not counted as verified
-  because no image node was exposed in the preview accessibility state.
+  package records those assets as bounded illustrative cards rather than UI
+  screenshots. Builder's native file picker was not controllable through the
+  available browser surface.
+- Image syntax: Builder rejected external Markdown image nodes while saving;
+  the saved article therefore uses nine visible links that open the committed
+  PNG illustration cards. The preview exposed all nine links and their raw
+  image destinations; no inline image node is claimed.
 - Preview URL: `https://builder.aws.com/project/3JWkr3zsJiWsbELhE83C5NLCQmB/veribid-evidence-driven-bid-evaluation-engine-for-auditable-rfp-decisions`.
 
 The preview visibly rendered the title, headings, narrative, links and tags.

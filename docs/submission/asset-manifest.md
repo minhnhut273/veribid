@@ -20,5 +20,6 @@ SVG/PNG visuals are explanatory assets and are clearly classified as
 `DESIGN-INTENT` in the claim register.
 
 The rendered PNG diagrams are committed and publicly reachable from the
-repository. Builder preview image rendering remains unverified until the
-platform's native image upload or a visible image node is confirmed.
+repository. The saved Builder article exposes nine visible links to these PNG
+assets; Builder rejected external Markdown image syntax during draft save, so
+inline image rendering and native cover upload remain unverified.

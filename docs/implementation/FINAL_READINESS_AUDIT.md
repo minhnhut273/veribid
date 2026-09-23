@@ -432,15 +432,16 @@ verified in Chrome profile `hcmut.edu.vn` as `NHỰT NGUYỄN MINH`.
 |---|---|
 | Title | Populated: `VeriBid — Evidence-Driven Bid Evaluation Engine for Auditable RFP Decisions` |
 | Description | Populated, 465/512 characters |
-| Content | Populated in Markdown mode; headings, narrative, links and tags rendered in preview |
+| Content | Populated in Markdown mode; headings, narrative, nine illustration links and tags rendered in preview |
 | Tags | `commercial-potential`, `startups`, `ai`, `serverless`, `amazon-bedrock-agents` |
 | Demo URL | Populated with the public `/demo` URL |
 | Repository URL | Populated with the GitHub URL |
-| Cover / product screenshots | Not uploaded; real redacted captures are still required for image-complete publication |
+| Cover / product screenshots | Not uploaded; native picker was not exposed, and illustration cards remain explicitly bounded as non-screenshot assets |
 | Publish state | `DRAFT`; `Đăng` was not clicked |
 
 The submission package is now **READY TO PUBLISH — USER ACTION REQUIRED** for
-the text/link draft, with an image-completeness boundary. Before publishing,
-the user must confirm originality/not-previously-published, decide whether to
-add the real screenshot assets listed in `docs/submission/asset-manifest.md`,
-review the preview, and manually click `Đăng` if satisfied.
+the saved text/link draft, with an image-completeness boundary. Before
+publishing, the user must confirm originality/not-previously-published, decide
+whether to add real screenshot assets listed in
+`docs/submission/asset-manifest.md`, review the preview, and manually click
+`Đăng` if satisfied.
