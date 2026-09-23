@@ -32,5 +32,6 @@ This artifact contains only executed, non-secret evidence.
 
 The current caller identity is the account root identity. No secret, token or
 session value is recorded here. Replace it with a least-privilege deployment
-identity before a non-hackathon release. Bedrock model availability and prompt
-cache read telemetry still require a controlled account-specific benchmark.
+identity before a non-hackathon release. A controlled Bedrock cache benchmark
+is now recorded separately; it was run locally and did not change production
+Lambda configuration.

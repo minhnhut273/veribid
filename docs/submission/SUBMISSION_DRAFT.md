@@ -39,5 +39,7 @@ override with rationale while the original system result remains preserved.
 - API health: https://jzmjnr4tq4.execute-api.us-east-1.amazonaws.com/api/v1/health
 - GitHub: https://github.com/minhnhut273/veribid
 
-Measured cache benchmark and authenticated production walkthrough remain
-pending AWS session refresh; no unmeasured cache claim is made here.
+The authenticated production walkthrough and a measured Bedrock cache
+benchmark are recorded under `docs/submission-proof/`. The benchmark used
+provider-reported cache telemetry; production Lambda remains unconfigured for
+Bedrock until a separate model-selection/deployment decision is approved.

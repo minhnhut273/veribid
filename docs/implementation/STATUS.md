@@ -49,8 +49,8 @@ accepted through a live synthetic Cognito workspace.
 | Repository constitution | PASS | `AGENTS.md` inspected and kept as the local source of truth. |
 | Project-local skill environment | PASS | `.agents/SOURCES.md`, `skills-lock.json` and setup script are present. |
 | Harness drift check | PASS | `python scripts/check_agent_harness.py` passed after the local-vs-external lock distinction was corrected. |
-| Product implementation | PASS for the deployed vertical slice | Live authenticated workflow reached evaluation, Human Review and export; Bedrock cache benchmark remains separate. |
-| AWS deployment / release proof | IN_PROGRESS | Public URL, API health/demo and authenticated E2E are verified; final cache/security hardening proof remains. |
+| Product implementation | PASS for the deployed vertical slice | Live authenticated workflow reached evaluation, Human Review and export; Bedrock cache evidence is recorded separately. |
+| AWS deployment / release proof | IN_PROGRESS | Public URL, API health/demo, authenticated E2E and cache telemetry are verified; final security hardening remains. |
 | Contract/domain core | PASS | Pydantic domain models, deterministic tools, verifier, parsers, review and export paths are covered by 22 backend tests. |
 
 ## Blockers and risks
@@ -58,11 +58,11 @@ accepted through a live synthetic Cognito workspace.
 - The configured AWS identity is the account root identity. Keep this as a
   ship risk and do not expose credentials; production hardening needs a
   least-privilege deployment/runtime identity.
-- Bedrock model selection and prompt-cache telemetry are not yet configured or
-  measured in this account; no cache-performance claim is made.
+- Production Lambda still has no selected Bedrock model and keeps prompt cache
+  disabled. The account-level cache benchmark is measured and recorded, but it
+  is not presented as production configuration.
 
 ## Continuation
 
-Run the controlled Bedrock availability/cache benchmark, complete the final
-security/reliability proof, and preserve the current live URLs and acceptance
-artifacts as the release record.
+Complete the final security/reliability proof and preserve the current live
+URLs, acceptance artifacts and cache benchmark as the release record.

@@ -1,7 +1,7 @@
 # VeriBid Acceptance Results
 
-Status: IN PROGRESS — public and authenticated vertical slice accepted; cache
-benchmark and final hardening remain.
+Status: IN PROGRESS — public and authenticated vertical slice plus cache
+telemetry accepted; final hardening remains.
 
 Executed local evidence includes 22 backend tests, frontend build/test, CDK
 build/synth, a live public health response, a live public demo response, and a
@@ -23,8 +23,12 @@ review were appended, and both Markdown and PDF exports were stored READY.
 The synthetic Cognito user, DDB evaluation records, S3 evidence objects and
 temporary credential file were removed after verification.
 
-The pushed implementation commit `2c0f751` passed GitHub Actions run
-[`35778614955`](https://github.com/minhnhut273/veribid/actions/runs/35778614955)
+The controlled prompt-cache benchmark is recorded in
+`docs/submission-proof/CACHE_BENCHMARK.md`: the cold request wrote 4,801 input
+tokens to cache and the warm request read the same 4,801 tokens from cache.
+
+The pushed implementation commit `fed4986` passed GitHub Actions run
+[`35807611863`](https://github.com/minhnhut273/veribid/actions/runs/35807611863)
 with backend, frontend and infrastructure checks. The static security review
 is recorded in `SECURITY_REVIEW.md`; it found no critical/high/medium code
 finding, with Python CVE database tooling and deployment-identity hardening
