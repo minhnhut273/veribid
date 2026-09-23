@@ -1,7 +1,9 @@
 # VeriBid Acceptance Results
 
-Status: IN PROGRESS — public and authenticated vertical slice plus cache
-telemetry accepted; final hardening remains.
+Status: PASS for hackathon MVP — public and authenticated production vertical
+slice, Bedrock invocation telemetry, review, export and cache benchmark
+evidence accepted; root deployment identity remains the single INFO hardening
+risk.
 
 Executed local evidence includes 22 backend tests, frontend build/test, CDK
 build/synth, a live public health response, a live public demo response, and a
@@ -14,14 +16,23 @@ rewrite returned HTML for Vite asset URLs. The extension-aware rewrite fix was
 deployed as Amplify manual deployment job 4; the asset now returns JavaScript,
 the landing page shows `API connected`, and `/demo` renders the seeded matrix.
 
-The live authenticated proof used synthetic evaluation `EVL_f98cc9cc335d4ccd`:
-three DOCX uploads were verified and scoped to two vendors, worker ingestion
-and requirement extraction succeeded, the evaluation reached
-`READY_FOR_REVIEW`, the matrix exposed `COMMERCIAL_SPECIALIST` and
-`COMPLIANCE_SPECIALIST`, an ACCEPT review and a rationale-backed OVERRIDE
-review were appended, and both Markdown and PDF exports were stored READY.
-The synthetic Cognito user, DDB evaluation records, S3 evidence objects and
-temporary credential file were removed after verification.
+The live authenticated production proof used synthetic evaluation
+`EVL_a777192bff2f4ac4`: five DOCX uploads (buyer RFP, buyer rubric and three
+vendor proposals) were verified and scoped to `VENDOR_A/PROPOSAL_A`,
+`VENDOR_B/PROPOSAL_B`, and `VENDOR_C/PROPOSAL_C`. Worker ingestion and
+requirement extraction succeeded; `RUN_8ce16b2e2dcd4ff9` reached
+`READY_FOR_REVIEW` with 9/9 result cells. The matrix preserved a Vendor A
+contradiction, Vendor C insufficient evidence, deterministic TCO/availability
+results and all three specialist labels. ACCEPT and rationale-backed OVERRIDE
+reviews were appended with audit events, and clean Markdown/PDF exports were
+stored READY. Failed pre-IAM retry records were removed before export
+regeneration.
+
+The worker emitted structured completion telemetry with two Bedrock model
+invocations, 1,099 input tokens and 467 output tokens. CloudWatch metrics for
+the live window reported one `RunCompleted` and two `ModelInvocations`; the
+production cache fields were null for this short run, so the separate measured
+cold/warm benchmark is the cache-hit proof.
 
 The controlled prompt-cache benchmark is recorded in
 `docs/submission-proof/CACHE_BENCHMARK.md`: the cold request wrote 4,801 input

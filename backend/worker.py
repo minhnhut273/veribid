@@ -153,6 +153,20 @@ def _evaluate(event: dict[str, Any]) -> dict[str, Any]:
     result_count = 0
     telemetry_totals = {"model_invocations": 0, "input_tokens": 0, "output_tokens": 0, "cache_read_input_tokens": 0, "cache_write_input_tokens": 0, "end_to_end_latency_ms": 0}
     bedrock = BedrockAdapter() if os.environ.get("BEDROCK_MODEL_ID") else None
+    stable_buyer_context = "\n".join(
+        f"{chunk.get('document_name', 'buyer-document')} | "
+        f"{chunk.get('source_pointer', {}).get('document_id', chunk.get('document_id', ''))} | "
+        f"{chunk.get('text', '')}"
+        for chunk in chunks
+        if chunk.get("vendor_id") is None
+    )
+    static_context = (
+        "VeriBid stable procurement context. This prefix contains only buyer RFP/rubric evidence; "
+        "vendor proposal text must remain in the request-scoped claims. Use only the supplied claims.\n"
+        f"{stable_buyer_context}\n"
+        "Canonical states: SATISFIED, PARTIALLY_SATISFIED, NOT_SATISFIED, "
+        "CONFLICTING_EVIDENCE, INSUFFICIENT_EVIDENCE."
+    )
     with table.batch_writer() as batch:
         for requirement in requirements:
             for (vendor_id, proposal_id), scoped_chunks in vendor_chunks.items():
@@ -188,7 +202,7 @@ def _evaluate(event: dict[str, Any]) -> dict[str, Any]:
                         system_prompt="Return only the typed JSON assessment. Never invent evidence and abstain when the supplied source claims are insufficient.",
                         user_prompt=json.dumps({"requirement": requirement.description, "vendor_id": vendor_id, "proposal_id": proposal_id, "claims": [claim.model_dump(mode="json") for claim in evidence_claims]}, sort_keys=True),
                         output_model=SpecialistOutput,
-                        static_context="VeriBid canonical states: SATISFIED, PARTIALLY_SATISFIED, NOT_SATISFIED, CONFLICTING_EVIDENCE, INSUFFICIENT_EVIDENCE.",
+                        static_context=static_context,
                         max_tokens=256,
                         enable_cache=os.environ.get("PROMPT_CACHE_ENABLED") == "true",
                         repair=lambda text: "Repair the previous output into JSON with exactly state, score, rationale fields. Output JSON only.",
@@ -231,7 +245,7 @@ def handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
             result = _evaluate(event)
         else:
             raise ValueError(f"unsupported workflow action: {action}")
-        print(json.dumps({"workflow_step": action, "evaluation_id": event.get("evaluation_id"), "job_id": event.get("job_id"), "run_id": event.get("run_id"), "status": result.get("status")}, separators=(",", ":")))
+        print(json.dumps({"workflow_step": action, "evaluation_id": event.get("evaluation_id"), "job_id": event.get("job_id"), "run_id": event.get("run_id"), "status": result.get("status"), "result_count": result.get("result_count"), "telemetry": result.get("telemetry")}, separators=(",", ":")))
         return result
     except Exception as error:
         _mark_failed(event, error)

@@ -20,6 +20,16 @@ export class VeriBidStack extends Stack {
 
     const bedrockModelId = this.node.tryGetContext('bedrockModelId') as string | undefined;
     const bedrockModelArn = this.node.tryGetContext('bedrockModelArn') as string | undefined;
+    const bedrockModelArns = ((this.node.tryGetContext('bedrockModelArns') as string | undefined) ?? '')
+      .split(',')
+      .map((value) => value.trim())
+      .filter(Boolean);
+    const bedrockModelName = bedrockModelId?.split('/').pop()?.replace(/^global\./, '');
+    const bedrockGlobalFoundationModelArn = bedrockModelName
+      ? `arn:aws:bedrock:::foundation-model/${bedrockModelName}`
+      : undefined;
+    const promptCacheEnabled = this.node.tryGetContext('promptCacheEnabled') === true
+      || this.node.tryGetContext('promptCacheEnabled') === 'true';
     const frontendOrigin = (this.node.tryGetContext('frontendOrigin') as string | undefined) ?? 'https://main.d2jw7e2fbiu6od.amplifyapp.com';
 
     const uploads = new s3.Bucket(this, 'UploadsBucket', {
@@ -89,14 +99,14 @@ export class VeriBidStack extends Stack {
         TABLE_NAME: records.tableName,
         UPLOADS_BUCKET: uploads.bucketName,
         BEDROCK_MODEL_ID: bedrockModelId ?? '',
-        PROMPT_CACHE_ENABLED: 'false',
+        PROMPT_CACHE_ENABLED: promptCacheEnabled ? 'true' : 'false',
       },
     });
 
     if (bedrockModelArn) {
       workerFunction.addToRolePolicy(new iam.PolicyStatement({
-        actions: ['bedrock:Converse', 'bedrock:InvokeModel'],
-        resources: [bedrockModelArn],
+        actions: ['bedrock:GetInferenceProfile', 'bedrock:InvokeModel', 'bedrock:InvokeModelWithResponseStream'],
+        resources: [bedrockModelArn, ...bedrockModelArns, ...(bedrockGlobalFoundationModelArn ? [bedrockGlobalFoundationModelArn] : [])],
       }));
     }
 

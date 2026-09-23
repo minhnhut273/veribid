@@ -37,10 +37,13 @@ class FakeTable:
 
 
 class FakeBedrock:
+    last_call = None
+
     def __init__(self):
         self.telemetry = BedrockTelemetry(1, 100, 20, 80, 0, 4)
 
     def converse_json(self, **kwargs):
+        FakeBedrock.last_call = kwargs
         return worker.SpecialistOutput(state="PARTIALLY_SATISFIED", score=6, rationale="Typed semantic assessment"), self.telemetry
 
 
@@ -58,6 +61,7 @@ def test_semantic_branch_keeps_route_when_bedrock_returns_typed_output(monkeypat
     }
     table = FakeTable([
         {"sk": "REQ#REQ_1", "payload": requirement},
+        {"sk": "CHK#CHK_RFP", "payload": {"document_id": "DOC_RFP", "document_name": "rfp.docx", "text": "Buyer requires EU data residency.", "source_pointer": {"document_id": "DOC_RFP"}, "vendor_id": None}},
         {"sk": "CHK#CHK_1", "payload": chunk},
     ])
     monkeypatch.setattr(worker, "_clients", lambda: (table, object()))
@@ -67,6 +71,8 @@ def test_semantic_branch_keeps_route_when_bedrock_returns_typed_output(monkeypat
     persisted = next(item for item in table.items if item.get("sk", "").startswith("RES#"))
     assert result["result_count"] == 1
     assert persisted["specialist"] == "COMPLIANCE_SPECIALIST"
+    assert "Buyer requires EU data residency." in FakeBedrock.last_call["static_context"]
+    assert "Customer data is hosted in the EU." not in FakeBedrock.last_call["static_context"]
 
 
 def test_requirement_extraction_retry_is_idempotent(monkeypatch):

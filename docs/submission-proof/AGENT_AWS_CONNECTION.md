@@ -21,10 +21,15 @@ This artifact contains only executed, non-secret evidence.
 - The deployed Vite asset returned HTTP 200 with `text/javascript` and the
   production browser rendered the landing page and read-only matrix.
 - Authenticated production proof used a synthetic Cognito account and
-  evaluation `EVL_f98cc9cc335d4ccd`; the workflow reached `READY_FOR_REVIEW`,
-  recorded ACCEPT and rationale-backed OVERRIDE reviews, and generated READY
-  Markdown/PDF exports. The synthetic identity and evaluation artifacts were
-  deleted and verified absent after proof.
+  evaluation `EVL_a777192bff2f4ac4`; five DOCX documents (buyer RFP/rubric plus
+  three vendor proposals) reached `READY_FOR_REVIEW` with 9/9 result cells,
+  preserved conflict/insufficient states, ACCEPT and rationale-backed OVERRIDE
+  reviews, and READY Markdown/PDF exports.
+- Production worker Bedrock configuration was verified against the global
+  Claude Sonnet 4.5 inference profile. Live run `RUN_8ce16b2e2dcd4ff9`
+  completed with two model invocations; CloudWatch returned one
+  `RunCompleted` and two `ModelInvocations` datapoints in the verification
+  window. The provider cache benchmark is recorded separately.
 - GitHub Actions verified commit `2c0f751` and `f9ebe86` successfully; the
   current Amplify rewrite fix is pushed as `cab2e21` ancestry with `7ef8252`.
 
@@ -32,6 +37,4 @@ This artifact contains only executed, non-secret evidence.
 
 The current caller identity is the account root identity. No secret, token or
 session value is recorded here. Replace it with a least-privilege deployment
-identity before a non-hackathon release. A controlled Bedrock cache benchmark
-is now recorded separately; it was run locally and did not change production
-Lambda configuration.
+identity before a non-hackathon release.

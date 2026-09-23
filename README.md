@@ -27,10 +27,10 @@ exports. The public `/demo` path remains synthetic and read-only.
 Amplify hosts the React application. Cognito protects the HTTP API, API
 Gateway invokes the Python Lambda boundary, S3 stores private upload objects,
 DynamoDB stores the aggregate and append-only evidence/review records, and
-Step Functions invokes the bounded worker pipeline. Bedrock is optional at
-deployment time until a currently available account/model pair is verified;
-deterministic threshold and TCO tools remain authoritative regardless of model
-availability.
+Step Functions invokes the bounded worker pipeline. Production is configured
+with the verified Claude Sonnet 4.5 global inference profile and the
+provider-supported prompt-cache path; deterministic threshold and TCO tools
+remain authoritative regardless of model availability.
 
 The live foundation URL is [the Amplify application](https://main.d2jw7e2fbiu6od.amplifyapp.com/),
 with [the public demo](https://main.d2jw7e2fbiu6od.amplifyapp.com/demo) and
@@ -42,8 +42,9 @@ S3 is private, uploads are verified with `HEAD` before asynchronous ingestion,
 and authenticated routes scope records by Cognito subject and evaluation.
 Vendor and proposal IDs remain paired through parsing and evaluation. The MVP
 does not award a vendor, does not include marketplace/ERP/payment features,
-and requires a deployment-time Bedrock access/model check before semantic AI
-calls are enabled.
+and fails closed when the configured semantic model is unavailable or returns
+invalid typed output. A deployment-time model/access check remains required
+before changing the production model.
 
 AWS deployment uses the project-local CDK CLI and the configured `my-aws`
 profile. Never commit credentials, tokens, or complete presigned URLs.
