@@ -22,9 +22,9 @@ Ship the contract-first VeriBid MVP as a real AWS-hosted application with a publ
 | M9 | Human Review | Accept/override/follow-up with immutable system suggestion | PASS — live ACCEPT review and audit trace |
 | M10 | Audit export | Markdown and PDF export from human-confirmed data | PASS — live READY Markdown/PDF exports |
 | M11 | Prompt caching telemetry | Controlled cold/warm benchmark with actual cache-read telemetry | PASS — Bedrock provider telemetry confirmed 4,801-token warm read |
-| M12 | Security, reliability and accessibility | Security review, error handling, accessibility checks | IN_PROGRESS — static review and dependency audit pass; root deployment identity remains an INFO risk |
+| M12 | Security, reliability and accessibility | Security review, error handling, accessibility checks | PASS with INFO risk — static review, dependency audit, public browser check and root-identity risk recorded |
 | M13 | Full E2E and release acceptance | P0/P1 checklist evidence | PASS — live 5-document/3-vendor production workflow, review/export proof, Bedrock telemetry and cache evidence |
-| M14 | GitHub, production and submission proof | Pushed commit, live URLs, proof package and submission draft | IN_PROGRESS — final worker/IAM/docs commit and CI remain |
+| M14 | GitHub, production and submission proof | Pushed commit, live URLs, proof package and submission draft | PASS — commits `8bb01ad`, `6bbcb91`, `7e24e35` pushed and CI runs passed |
 
 ## Ordering rules
 

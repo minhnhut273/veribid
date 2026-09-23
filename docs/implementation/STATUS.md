@@ -2,7 +2,7 @@
 
 ## Current state
 
-Status: IN_PROGRESS — product implementation and shipping mode.
+Status: PASS for hackathon MVP — product implementation and shipping mode.
 
 Last verified: 2026-09-23
 
@@ -57,7 +57,7 @@ redeployed and accepted through a live synthetic Cognito workspace.
 | Repository constitution | PASS | `AGENTS.md` inspected and kept as the local source of truth. |
 | Project-local skill environment | PASS | `.agents/SOURCES.md`, `skills-lock.json` and setup script are present. |
 | Harness drift check | PASS | `python scripts/check_agent_harness.py` passed after the local-vs-external lock distinction was corrected. |
-| Product implementation | PASS for the deployed vertical slice | Live authenticated workflow reached evaluation, Human Review and export; Bedrock cache evidence is recorded separately. |
+| Product implementation | PASS | Live authenticated workflow reached evaluation, Human Review and export; Bedrock cache evidence is recorded separately. |
 | AWS deployment / release proof | PASS for hackathon MVP | Public URL, API health/demo, authenticated production workflow, Bedrock run telemetry and export evidence are verified; root deployment identity remains an INFO hardening risk. |
 | Contract/domain core | PASS | Pydantic domain models, deterministic tools, verifier, parsers, review and export paths are covered by 22 backend tests. |
 
@@ -65,7 +65,8 @@ redeployed and accepted through a live synthetic Cognito workspace.
 
 - The configured AWS identity is the account root identity. Keep this as a
   ship risk and do not expose credentials; production hardening needs a
-  least-privilege deployment/runtime identity.
+  least-privilege deployment/runtime identity before handling real supplier
+  documents; this does not block the synthetic hackathon proof.
 - Production Bedrock uses the verified Sonnet 4.5 global inference profile with
   prompt-cache support enabled. The benchmark's provider-reported cache hit is
   the authoritative cache evidence; the short controlled production run did
@@ -74,6 +75,6 @@ redeployed and accepted through a live synthetic Cognito workspace.
 
 ## Continuation
 
-Commit and push the final worker/IAM/docs/fixture changes, run CI, then keep the
-current live URLs, acceptance artifacts and cache benchmark as the release
-record.
+No remaining implementation blocker is known for the synthetic hackathon MVP.
+Keep the live URLs, acceptance artifacts and cache benchmark as the release
+record; before real supplier data, replace the root deployment identity.
