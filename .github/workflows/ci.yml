@@ -41,3 +41,12 @@ jobs:
           npm ci
           npm run build
           npm run synth
+      - name: Package CDK cloud assembly for approved deployment handoff
+        working-directory: infra
+        run: tar -czf cdk-cloud-assembly.tar.gz cdk.out
+      - name: Upload CDK cloud assembly
+        uses: actions/upload-artifact@v4
+        with:
+          name: cdk-cloud-assembly-${{ github.sha }}
+          path: infra/cdk-cloud-assembly.tar.gz
+          retention-days: 7
