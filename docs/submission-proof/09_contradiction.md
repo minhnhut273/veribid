@@ -1,5 +1,5 @@
 # 09 Contradiction
 
-Status: PARTIAL.
+Status: PASS for fresh authenticated conflict detail; no screenshot is claimed.
 
-The public demo currently contains `CONFLICTING_EVIDENCE`; the local UI and export patch now render both paired sides. The patched production UI/export is not deployed, so a current live both-side capture is not claimed.
+In fresh evaluation `EVL_4f323aba9796446f`, Vendor A detail showed `CONFLICTING EVIDENCE · 10 / 10`, supporting excerpt “The proposal references EU processing or hosting.” and contradicting excerpt “The proposal references processing in the United States.” Both sides showed the Vendor A proposal SourcePointer, and conflict metadata was `DATA_RESIDENCY · UNRESOLVED`.

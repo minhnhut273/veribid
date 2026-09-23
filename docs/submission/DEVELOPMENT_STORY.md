@@ -21,8 +21,11 @@ Codex used the existing AWS CLI/CDK/GitHub tooling, verified the live public
 foundation, and kept credentials and presigned URLs out of source and proof
 artifacts. The final remediation added a dedicated non-root deployment
 profile, expanded the result-detail trace, and made conflict pairs explicit in
-Markdown/PDF export. The existing authenticated synthetic acceptance and
-current-model Bedrock/cache evidence remain recorded, while a fresh
-post-remediation deployment and authenticated UI replay are still pending.
-The local deployment check is currently blocked by Docker Desktop being
-unavailable for CDK's existing Python Lambda asset bundling step.
+Markdown/PDF export. CI synthesized a production-context CDK assembly and the
+non-root deployment updated the backend; Amplify job 6 then deployed the
+configured frontend. A fresh authenticated synthetic replay
+(`EVL_4f323aba9796446f`, Step Functions run
+`RUN_d35820c4850d472f`) verified conflict, abstention, deterministic evidence,
+Human Review and READY export records. Docker Desktop remains unavailable for
+local CDK asset bundling, so local direct synth is still an environment
+failure; CI is the recorded synth/deployment handoff.

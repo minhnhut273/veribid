@@ -1,5 +1,6 @@
 # 12 Human Review
 
-Status: PARTIAL.
+Status: PASS for fresh authenticated ACCEPT/OVERRIDE behavior; no screenshot is
+claimed.
 
-The current domain/API code enforces ACCEPT/OVERRIDE semantics and requires rationale for OVERRIDE while preserving system state/score. Historical synthetic acceptance recorded ACCEPT and rationale-backed OVERRIDE; no fresh authenticated replay was captured after this local patch.
+Fresh evaluation `EVL_4f323aba9796446f` recorded ACCEPT for the Vendor A conflict. An OVERRIDE with an empty rationale left `Record review` disabled. A rationale-backed OVERRIDE then succeeded with final state `NOT_SATISFIED`, score `0`, and rationale `Synthetic acceptance override: unresolved residency conflict fails mandatory compliance review.` The UI retained the original `CONFLICTING EVIDENCE · 10 / 10` system suggestion.

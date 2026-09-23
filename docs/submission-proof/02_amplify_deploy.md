@@ -1,5 +1,5 @@
 # 02 Amplify Deployment
 
-Status: PARTIAL.
+Status: PASS.
 
-The current non-root profile read the CloudFormation `AmplifyApp` resource as `UPDATE_COMPLETE`. A direct `amplify:GetBranch` read was denied by the intentionally narrow deployment policy, so no fresh Amplify job status is claimed here. Existing historical deployment evidence remains in the completion report.
+The configured frontend was deployed to the existing Amplify app through job `6`, which returned `SUCCEED` from `2026-09-23T12:25:36+07:00` to `2026-09-23T12:25:44+07:00`. The deployment was initiated through the non-root `veribid-deploy` identity and its dedicated manual-deploy role. No Amplify resource was replaced.

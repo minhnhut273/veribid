@@ -58,13 +58,15 @@ override with rationale while the original system result remains preserved.
 - API health: https://jzmjnr4tq4.execute-api.us-east-1.amazonaws.com/api/v1/health
 - GitHub: https://github.com/minhnhut273/veribid
 
-The prior authenticated synthetic production walkthrough, live CloudWatch
-telemetry and a measured Bedrock cache benchmark are recorded under
-`docs/submission-proof/`. The benchmark uses provider-reported cache telemetry:
-one controlled cold/warm pair recorded 4,801 cache-write tokens and 4,801
-cache-read tokens. This is not presented as p50, p95, a production-wide hit
-rate or guaranteed cost savings. A fresh post-remediation authenticated replay
-and deployment of the current export renderer remain release evidence tasks.
+The fresh post-remediation authenticated synthetic replay is recorded under
+`docs/submission-proof/`: evaluation `EVL_4f323aba9796446f` completed the
+three-vendor workflow, including conflict, abstention, deterministic evidence,
+ACCEPT/OVERRIDE review and READY Markdown/PDF export records. The deployment
+used the non-root `veribid-deploy` identity; Amplify job 6 succeeded and the
+Step Functions run was `RUN_d35820c4850d472f`. The benchmark uses
+provider-reported cache telemetry: one controlled cold/warm pair recorded
+4,801 cache-write tokens and 4,801 cache-read tokens. This is not presented
+as p50, p95, a production-wide hit rate or guaranteed cost savings.
 
 Current format boundary: text-based DOCX, text-layer PDF and XLSX
 workbook/sheet/row evidence are supported. Scanned or image-heavy PDF and

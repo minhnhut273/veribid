@@ -1,5 +1,5 @@
 # 08 Source Grounding
 
-Status: PARTIAL.
+Status: PASS for the fresh Vendor A conflict detail; no screenshot is claimed.
 
-The current code contract requires resolvable `SourcePointer` objects, and the local result-detail/export changes render pointer IDs, document names/types and locators. A current authenticated result-detail capture with a live SourcePointer was not obtained.
+The fresh Vendor A conflict detail for `EVL_4f323aba9796446f` showed both SourcePointer IDs `PTR_DOC_75029ccac05f4a48_0002`, document `vendor_a_proposal.docx`, type `DOCX`, and locator `section paragraph 3`. The detail also preserved the `VENDOR_A / PROPOSAL_A` scope.

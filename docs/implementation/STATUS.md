@@ -2,9 +2,10 @@
 
 ## Current state
 
-Status: CONDITIONAL GO after final clean-go remediation — product remains in
-implementation and shipping mode, but current remediation deployment/proof is
-not complete.
+Status: CONDITIONAL GO after final clean-go remediation — the patched backend
+and frontend are deployed and a fresh authenticated synthetic replay passed;
+Builder Center project status and browser-captured downloaded export files
+remain unresolved.
 
 Last verified: 2026-09-23
 
@@ -15,9 +16,10 @@ read-only synthetic demo. The historical deployed authenticated workflow covers
 scoped document upload, typed requirement extraction, explicit specialist
 routing, evaluation polling, evidence matrix, result detail, Human Review,
 audit events, and Markdown/PDF export. The Bedrock inference profile and
-prompt-cache path are enabled in the production worker. The current local
-remediation expands conflict traceability in the UI/export and is awaiting
-deployment because Docker asset bundling is unavailable locally.
+prompt-cache path are enabled in the production worker. The remediation
+expands conflict traceability in the deployed UI/export. The local Docker
+engine remains unavailable, so the production-equivalent CDK assembly was
+synthesized in CI and deployed with the non-root profile.
 
 ## Baseline evidence
 
@@ -63,7 +65,7 @@ deployment because Docker asset bundling is unavailable locally.
 | Project-local skill environment | PASS | `.agents/SOURCES.md`, `skills-lock.json` and setup script are present. |
 | Harness drift check | PASS | `python scripts/check_agent_harness.py` passed after the local-vs-external lock distinction was corrected. |
 | Product implementation | PASS historically / PARTIAL current remediation | Live authenticated workflow reached evaluation, Human Review and export; current UI/export changes await deployment. |
-| AWS deployment / release proof | CONDITIONAL GO | Public URL, API health/demo, historical authenticated workflow, Bedrock run telemetry and export evidence are verified; a non-root deployment profile is configured, but current remediation deployment and fresh proof recapture remain pending. |
+| AWS deployment / release proof | CONDITIONAL GO | Public URL, API health/demo, non-root deployment, fresh authenticated replay, current UI trace and READY export records are verified; Builder Center status and browser-captured downloaded export files remain unresolved. |
 | Contract/domain core | PASS | Pydantic domain models, deterministic tools, verifier, parsers, review and export paths are covered by 22 backend tests. |
 
 ## Blockers and risks

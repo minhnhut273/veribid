@@ -1,5 +1,6 @@
 # 10 Abstention
 
-Status: PASS for the public synthetic fixture.
+Status: PASS for fresh authenticated synthetic evaluation; no screenshot is
+claimed.
 
-The current `/api/v1/demo` response contains `INSUFFICIENT_EVIDENCE`, representing Vendor C-style explicit abstention. This is a public synthetic fixture, not a fresh authenticated evaluation.
+Vendor C in fresh evaluation `EVL_4f323aba9796446f` showed `INSUFFICIENT EVIDENCE · — / 10` with the explicit message `INSUFFICIENT_EVIDENCE — no resolvable source claim.` This is abstention rather than an inferred vendor claim.

@@ -312,9 +312,44 @@ or historical evidence into current proof.
 
 ### Readiness decision after this addendum
 
-The current result remains **CONDITIONAL GO**, not CLEAN GO. The non-root
-deployment identity is now configured, but the patched backend/frontend have
-not been deployed because CDK asset bundling is blocked by the local Docker
-engine. A fresh authenticated eight-step run, current conflict UI/export
-proof, separate numbered 01–19 proof pack, and Builder Center project status
-remain unproven. No Builder Center publish/submit action was taken.
+The current result remains **CONDITIONAL GO**, not CLEAN GO. The local Docker
+engine remains unavailable, but CI produced the production-context assembly
+and the patched backend/frontend were deployed through the non-root path. A
+fresh authenticated replay and current conflict UI/export records are now
+proven. Builder Center project status remains UNKNOWN and the in-app browser
+did not expose a local download event for the READY export records. No Builder
+Center publish/submit action was taken.
+
+## 17. Final live remediation verification 2026-09-23
+
+This section is the current authoritative addendum and supersedes stale
+pre-remediation statuses in sections 1–16 where they conflict.
+
+| Gate | Current result | Evidence boundary |
+|---|---|---|
+| Non-root deployment | PASS | `veribid-deploy` caller was a dedicated IAM user; CloudFormation reached `UPDATE_COMPLETE`. |
+| CI validation and deployment assembly | PASS | GitHub run `35821181848` passed backend/frontend/infra checks and uploaded the production-context CDK assembly. |
+| Stateful-resource safety | PASS | Deployed-template comparison showed no replacement of S3, DynamoDB, Cognito, Step Functions, API Gateway or Amplify resources; only Lambda code objects changed. |
+| Public app and API | PASS | Root and `/demo` HTTP 200; health HTTP 200; anonymous evaluation POST HTTP 401; Amplify job 6 `SUCCEED`. |
+| Fresh authenticated workflow | PASS | `EVL_4f323aba9796446f` completed create/upload/extract/run/matrix/review/export with synthetic DOCX fixtures. |
+| Vendor A contradiction | PASS | Both supporting and contradicting excerpts, claim/source trace and `DATA_RESIDENCY · UNRESOLVED` were visible. |
+| Vendor C abstention | PASS | Detail showed `INSUFFICIENT_EVIDENCE — no resolvable source claim.` |
+| Deterministic authority | PASS | Vendor B detail showed `numeric_threshold_check · SATISFIED`. |
+| Human Review | PASS | ACCEPT succeeded; empty-rationale OVERRIDE remained disabled; rationale-backed OVERRIDE succeeded and retained the system suggestion. |
+| Audit history | PASS | Fresh evaluation had separate review records and four `AUD#` audit events in DynamoDB. |
+| Export trace | PASS with boundary | Markdown/PDF export records were READY; Markdown contained both conflict sides and source trace. Browser download event was not exposed, so no local downloaded file is claimed. |
+| Builder Center submission status | UNKNOWN | Read-only profile/badges page did not expose the exact VeriBid project record. No publish or submit action was taken. |
+
+### Current proof inventory
+
+Proof files `01_live_app.md` through `18_submission_tags.md` now record the
+current observation or its explicit boundary. `19_builder_submission.md`
+remains `UNKNOWN`. This is a text evidence pack; it intentionally does not
+fabricate screenshots or downloaded files.
+
+### Final readiness
+
+**CONDITIONAL GO.** This is not **CLEAN GO** because a P0 submission gate —
+the exact Builder Center project status — remains unknown. Local direct CDK
+synth is also not runnable while Docker Desktop's Linux engine is unavailable,
+although the CI assembly and deployed CloudFormation update passed.

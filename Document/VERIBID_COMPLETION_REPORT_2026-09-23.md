@@ -2,8 +2,10 @@
 
 **Ngày báo cáo:** 2026-09-23  
 **Phạm vi:** Repository setup, AWS deployment, public demo, authenticated production vertical slice và release proof  
-**Trạng thái:** CONDITIONAL GO sau final clean-go remediation; historical MVP
-acceptance remains PASS, but current remediation deployment/proof is pending.
+**Trạng thái:** CONDITIONAL GO sau final clean-go remediation; current
+deployment và fresh authenticated synthetic replay đã PASS, nhưng Builder
+Center project status và browser-captured downloaded export files chưa được
+xác minh.
 
 ## 1. Tóm tắt kết quả
 
@@ -212,16 +214,50 @@ re-described as a fresh current run. During the 2026-09-23 remediation:
 - `frontend/src/App.tsx` was changed locally to show complete SourcePointer
   labels, both conflict-side excerpts, and explicit `SYSTEM SUGGESTION` versus
   `HUMAN DECISION`/rationale labels.
-- A regression test was added for the conflict export trace. It is not
-  currently executable because the local Python environment lacks `pytest`
-  and `pydantic`.
+- A regression test was added for the conflict export trace. The repository
+  virtual environment ran the backend suite with `23 passed`; the CI run
+  `35821181848` independently passed backend, frontend and infrastructure
+  checks.
 - Harness, Python syntax, frontend type-check/build, infrastructure
   TypeScript build, live public HTTP probes and non-root CloudFormation reads
-  were re-run. CDK synth/diff/deploy could not run because Docker Desktop's
-  Linux engine was unavailable for the existing Lambda asset bundling step.
+  were re-run. Direct local CDK synth/diff remains unavailable because Docker
+  Desktop's Linux engine was unavailable for the existing Lambda asset
+  bundling step; CI produced the deployable assembly instead.
 
-Current readiness therefore remains **CONDITIONAL GO**. A fresh deployment of
-these local changes, fresh authenticated eight-step acceptance, separate
-canonical proof artifacts 01-19, and Builder Center project status are not
-proven in this remediation. No Builder Center publish or hackathon submission
-was performed.
+## 13. Current live remediation evidence
+
+The following replaces the stale deployment/proof wording in the historical
+sections above:
+
+- CI run `35821181848` passed backend, frontend and infrastructure checks and
+  published the production-context CDK assembly. The local Docker Desktop
+  Linux engine was unavailable, so direct local CDK asset bundling remains an
+  environment failure.
+- The assembly was deployed to `VeriBidStack` as `UPDATE_COMPLETE` using the
+  non-root `veribid-deploy` profile. The deployed resource comparison showed
+  no replacement of S3, DynamoDB, Cognito, Step Functions, API Gateway or
+  Amplify resources; only Lambda code objects changed.
+- Amplify deployment job `6` completed with `SUCCEED` after rebuilding the
+  frontend with the live API and Cognito configuration. The public root,
+  `/demo` and API health returned HTTP 200; an anonymous protected evaluation
+  POST returned HTTP 401.
+- Fresh authenticated synthetic evaluation `EVL_4f323aba9796446f` completed
+  the UI workflow with RFP, rubric and Vendor A/B/C synthetic DOCX fixtures.
+  Vendor A preserved a conflict with both claims and SourcePointers, Vendor C
+  abstained as `INSUFFICIENT_EVIDENCE`, and Vendor B showed the deterministic
+  `numeric_threshold_check` result. The Step Functions evaluation execution
+  was `RUN_d35820c4850d472f` and completed successfully.
+- Human Review recorded ACCEPT, rejected an OVERRIDE without rationale at the
+  UI validation boundary, and then recorded a rationale-backed OVERRIDE to
+  `NOT_SATISFIED` with score `0`; the original system suggestion remained
+  visible. DynamoDB contained the corresponding append-only audit events and
+  READY Markdown/PDF export records.
+- The Markdown export record contained the conflict trace and the PDF export
+  record was READY. The in-app browser did not expose a local download event,
+  so no downloaded-file artifact is claimed.
+
+Readiness remains **CONDITIONAL GO**. Builder Center was inspected read-only,
+but the exact VeriBid project record and DRAFT/PUBLISHED status were not
+visible; no publish or hackathon submission was performed. The canonical
+proof files now record current evidence or an explicit boundary, and the
+remaining UNKNOWN item is `19_builder_submission.md`.

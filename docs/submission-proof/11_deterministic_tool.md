@@ -1,5 +1,6 @@
 # 11 Deterministic Tool
 
-Status: PARTIAL.
+Status: PASS for fresh authenticated deterministic result; no screenshot is
+claimed.
 
-`backend/deterministic.py` contains authoritative threshold, TCO and weighted-score calculations, and the historical authenticated acceptance recorded live deterministic results. No fresh authenticated deterministic result was generated during this remediation.
+Vendor B technical detail in fresh evaluation `EVL_4f323aba9796446f` showed the authoritative deterministic block `numeric_threshold_check · SATISFIED`. The result is rendered separately from semantic rationale; no autonomous vendor award is implied.
