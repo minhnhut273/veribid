@@ -146,8 +146,19 @@ def main() -> None:
         out.append(f'<path d="{d}" fill="none" stroke="{s.get("strokeColor", "#64748b")}" stroke-width="{s.get("strokeWidth", "1.5")}"{dash} marker-end="url(#arrow)"/>')
         label = clean_lines(cell.get("value", ""))
         if label:
+            label[0] = {
+                "Role / policy controls API + workflow": "IAM policy",
+                "StartExecution • 202": "StartExecution / 202",
+                "Read source objects": "Read source",
+                "Generate report": "Generate export",
+                "Write Markdown / PDF": "Write export",
+                "Runtime telemetry": "Telemetry",
+                "Conditional OCR (not deployed)": "Conditional OCR",
+            }.get(label[0], label[0])
             mx, my = points[len(points) // 2]
-            out.append(f'<text x="{mx:g}" y="{my - 7:g}" text-anchor="middle" font-family="Arial,sans-serif" font-size="10px" fill="#475569" paint-order="stroke" stroke="#ffffff" stroke-width="4">{esc(label[0])}</text>')
+            label_width = max(28, len(label[0]) * 5.8 + 10)
+            out.append(f'<rect x="{mx - label_width / 2:g}" y="{my - 18:g}" width="{label_width:g}" height="14" rx="3" fill="#ffffff" opacity="0.92"/>')
+            out.append(f'<text x="{mx:g}" y="{my - 7:g}" text-anchor="middle" font-family="Arial,sans-serif" font-size="10px" fill="#475569">{esc(label[0])}</text>')
 
     for cell in nodes:
         cid = cell.get("id", "")

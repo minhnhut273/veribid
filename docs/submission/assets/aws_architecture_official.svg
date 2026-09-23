@@ -10,37 +10,51 @@
 <rect x="215" y="685" width="1500" height="195" rx="8" fill="#F8FAFC" stroke="#cbd5e1" stroke-width="1.5"/>
 <text x="229" y="707" font-family="Arial,sans-serif" font-size="11px" font-weight="700" fill="#4b5563">3  PERSISTENCE, EXPORT &amp; OBSERVABILITY  •  durable state and operational evidence</text>
 <path d="M110,431 L300,255" fill="none" stroke="#545B64" stroke-width="2" marker-end="url(#arrow)"/>
-<text x="300" y="248" text-anchor="middle" font-family="Arial,sans-serif" font-size="10px" fill="#475569" paint-order="stroke" stroke="#ffffff" stroke-width="4">HTTPS</text>
+<rect x="280.5" y="237" width="39" height="14" rx="3" fill="#ffffff" opacity="0.92"/>
+<text x="300" y="248" text-anchor="middle" font-family="Arial,sans-serif" font-size="10px" fill="#475569">HTTPS</text>
 <path d="M370,255 L535,200" fill="none" stroke="#545B64" stroke-width="2" marker-end="url(#arrow)"/>
-<text x="535" y="193" text-anchor="middle" font-family="Arial,sans-serif" font-size="10px" fill="#475569" paint-order="stroke" stroke="#ffffff" stroke-width="4">Sign in</text>
+<rect x="509.7" y="182" width="50.6" height="14" rx="3" fill="#ffffff" opacity="0.92"/>
+<text x="535" y="193" text-anchor="middle" font-family="Arial,sans-serif" font-size="10px" fill="#475569">Sign in</text>
 <path d="M370,255 L430,300 L735,300 L770,255" fill="none" stroke="#545B64" stroke-width="2" marker-end="url(#arrow)"/>
-<text x="735" y="293" text-anchor="middle" font-family="Arial,sans-serif" font-size="10px" fill="#475569" paint-order="stroke" stroke="#ffffff" stroke-width="4">REST /api/v1</text>
+<rect x="695.2" y="282" width="79.6" height="14" rx="3" fill="#ffffff" opacity="0.92"/>
+<text x="735" y="293" text-anchor="middle" font-family="Arial,sans-serif" font-size="10px" fill="#475569">REST /api/v1</text>
 <path d="M605,200 L770,255" fill="none" stroke="#8B5CF6" stroke-width="1" stroke-dasharray="6 5" marker-end="url(#arrow)"/>
-<text x="770" y="248" text-anchor="middle" font-family="Arial,sans-serif" font-size="10px" fill="#475569" paint-order="stroke" stroke="#ffffff" stroke-width="4">JWT authorizer</text>
+<rect x="724.4" y="237" width="91.2" height="14" rx="3" fill="#ffffff" opacity="0.92"/>
+<text x="770" y="248" text-anchor="middle" font-family="Arial,sans-serif" font-size="10px" fill="#475569">JWT authorizer</text>
 <path d="M840,255 L1010,255" fill="none" stroke="#545B64" stroke-width="2" marker-end="url(#arrow)"/>
-<text x="1010" y="248" text-anchor="middle" font-family="Arial,sans-serif" font-size="10px" fill="#475569" paint-order="stroke" stroke="#ffffff" stroke-width="4">Invoke</text>
+<rect x="987.6" y="237" width="44.8" height="14" rx="3" fill="#ffffff" opacity="0.92"/>
+<text x="1010" y="248" text-anchor="middle" font-family="Arial,sans-serif" font-size="10px" fill="#475569">Invoke</text>
 <path d="M1080,255 L1004,481" fill="none" stroke="#545B64" stroke-width="2" marker-end="url(#arrow)"/>
-<text x="1004" y="474" text-anchor="middle" font-family="Arial,sans-serif" font-size="10px" fill="#475569" paint-order="stroke" stroke="#ffffff" stroke-width="4">StartExecution • 202</text>
+<rect x="941" y="463" width="126" height="14" rx="3" fill="#ffffff" opacity="0.92"/>
+<text x="1004" y="474" text-anchor="middle" font-family="Arial,sans-serif" font-size="10px" fill="#475569">StartExecution / 202</text>
 <path d="M1080,255 L950,330 L420,330 L420,477 L300,495" fill="none" stroke="#545B64" stroke-width="1.5" marker-end="url(#arrow)"/>
 <path d="M370,255 L300,495" fill="none" stroke="#5B8C3A" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#arrow)"/>
 <path d="M370,495 L500,495" fill="none" stroke="#545B64" stroke-width="2" marker-end="url(#arrow)"/>
-<text x="500" y="488" text-anchor="middle" font-family="Arial,sans-serif" font-size="10px" fill="#475569" paint-order="stroke" stroke="#ffffff" stroke-width="4">Read source objects</text>
+<rect x="463.1" y="477" width="73.8" height="14" rx="3" fill="#ffffff" opacity="0.92"/>
+<text x="500" y="488" text-anchor="middle" font-family="Arial,sans-serif" font-size="10px" fill="#475569">Read source</text>
 <path d="M1086,481 L950,405 L610,405 L500,495" fill="none" stroke="#545B64" stroke-width="1.5" marker-end="url(#arrow)"/>
-<text x="610" y="398" text-anchor="middle" font-family="Arial,sans-serif" font-size="10px" fill="#475569" paint-order="stroke" stroke="#ffffff" stroke-width="4">Invoke parser</text>
+<rect x="567.3" y="387" width="85.4" height="14" rx="3" fill="#ffffff" opacity="0.92"/>
+<text x="610" y="398" text-anchor="middle" font-family="Arial,sans-serif" font-size="10px" fill="#475569">Invoke parser</text>
 <path d="M570,495 L500,600" fill="none" stroke="#C7131F" stroke-width="1.5" stroke-dasharray="6 5" marker-end="url(#arrow)"/>
 <path d="M1086,481 L1190,495" fill="none" stroke="#545B64" stroke-width="2" marker-end="url(#arrow)"/>
-<text x="1190" y="488" text-anchor="middle" font-family="Arial,sans-serif" font-size="10px" fill="#475569" paint-order="stroke" stroke="#ffffff" stroke-width="4">Semantic path</text>
+<rect x="1147.3" y="477" width="85.4" height="14" rx="3" fill="#ffffff" opacity="0.92"/>
+<text x="1190" y="488" text-anchor="middle" font-family="Arial,sans-serif" font-size="10px" fill="#475569">Semantic path</text>
 <path d="M1086,481 L1390,495" fill="none" stroke="#545B64" stroke-width="2" marker-end="url(#arrow)"/>
-<text x="1390" y="488" text-anchor="middle" font-family="Arial,sans-serif" font-size="10px" fill="#475569" paint-order="stroke" stroke="#ffffff" stroke-width="4">Deterministic path</text>
+<rect x="1332.8" y="477" width="114.4" height="14" rx="3" fill="#ffffff" opacity="0.92"/>
+<text x="1390" y="488" text-anchor="middle" font-family="Arial,sans-serif" font-size="10px" fill="#475569">Deterministic path</text>
 <path d="M1086,481 L1004,765" fill="none" stroke="#545B64" stroke-width="2" marker-end="url(#arrow)"/>
-<text x="1004" y="758" text-anchor="middle" font-family="Arial,sans-serif" font-size="10px" fill="#475569" paint-order="stroke" stroke="#ffffff" stroke-width="4">Generate report</text>
+<rect x="955.5" y="747" width="97" height="14" rx="3" fill="#ffffff" opacity="0.92"/>
+<text x="1004" y="758" text-anchor="middle" font-family="Arial,sans-serif" font-size="10px" fill="#475569">Generate export</text>
 <path d="M1086,481 L1100,650 L1235,650 L1200,765" fill="none" stroke="#545B64" stroke-width="2" marker-end="url(#arrow)"/>
 <path d="M1074,765 L900,840 L420,840 L420,530 L300,495" fill="none" stroke="#545B64" stroke-width="1.5" marker-end="url(#arrow)"/>
-<text x="420" y="833" text-anchor="middle" font-family="Arial,sans-serif" font-size="10px" fill="#475569" paint-order="stroke" stroke="#ffffff" stroke-width="4">Write Markdown / PDF</text>
+<rect x="380.2" y="822" width="79.6" height="14" rx="3" fill="#ffffff" opacity="0.92"/>
+<text x="420" y="833" text-anchor="middle" font-family="Arial,sans-serif" font-size="10px" fill="#475569">Write export</text>
 <path d="M1086,481 L1120,390 L1580,390 L1580,765 L1450,765" fill="none" stroke="#94A3B8" stroke-width="1" stroke-dasharray="6 5" marker-end="url(#arrow)"/>
-<text x="1580" y="383" text-anchor="middle" font-family="Arial,sans-serif" font-size="10px" fill="#475569" paint-order="stroke" stroke="#ffffff" stroke-width="4">Runtime telemetry</text>
+<rect x="1548.9" y="372" width="62.2" height="14" rx="3" fill="#ffffff" opacity="0.92"/>
+<text x="1580" y="383" text-anchor="middle" font-family="Arial,sans-serif" font-size="10px" fill="#475569">Telemetry</text>
 <path d="M1580,240 L1430,305 L1120,305 L1010,255" fill="none" stroke="#C7131F" stroke-width="1" stroke-dasharray="6 5" marker-end="url(#arrow)"/>
-<text x="1120" y="298" text-anchor="middle" font-family="Arial,sans-serif" font-size="10px" fill="#475569" paint-order="stroke" stroke="#ffffff" stroke-width="4">Role / policy controls API + workflow</text>
+<rect x="1086" y="287" width="68" height="14" rx="3" fill="#ffffff" opacity="0.92"/>
+<text x="1120" y="298" text-anchor="middle" font-family="Arial,sans-serif" font-size="10px" fill="#475569">IAM policy</text>
 <text x="47" y="46" text-anchor="start" font-family="Arial,sans-serif" font-size="24px" font-weight="700" fill="#232F3E">VeriBid — AWS System Architecture</text>
 <text x="50" y="76" text-anchor="start" font-family="Arial,sans-serif" font-size="12px" font-weight="400" fill="#5F6B7A">Serverless MVP baseline  |  control plane + async evaluation data plane  |  AgentCore excluded</text>
 <circle cx="74" cy="417" r="14" fill="#232F3E"/>
