@@ -14,6 +14,15 @@ VeriBid creates a scoped evaluation workspace, extracts atomic requirements,
 keeps vendor/proposal evidence isolated, applies deterministic calculations,
 and presents an Evidence Matrix for Human Review.
 
+## Target user and commercial value
+
+The initial customer is a procurement, compliance or security review team at
+an enterprise or regulated mid-market organization that must compare several
+vendor proposals against a common RFP and defend the decision later. VeriBid
+reduces review time and audit risk by making every material conclusion
+traceable to source evidence while keeping the final decision with a human
+reviewer.
+
 ## Product workflow
 
 Upload → Verify → Extract → Retrieve by proposal scope → Specialist evaluation
@@ -26,6 +35,14 @@ CloudWatch form the serverless baseline. Bedrock is the configured semantic
 path through the verified Claude Sonnet 4.5 global inference profile, with
 provider prompt-cache support enabled and deterministic fallbacks kept
 authoritative.
+
+The coding agent is connected to the AWS environment through the repository's
+AWS CLI/CDK workflow. It contributed to the deployed vertical slice by
+inspecting the live stack, validating the public API and Amplify routes,
+testing the authenticated workflow contracts, and recording deployment and
+CloudWatch evidence. The semantic path uses Bedrock; the deterministic
+Python/Lambda path owns thresholds, TCO and other arithmetic; the Skeptical
+Verifier preserves contradictions or abstains when evidence is insufficient.
 
 ## Claim boundary
 
@@ -41,8 +58,14 @@ override with rationale while the original system result remains preserved.
 - API health: https://jzmjnr4tq4.execute-api.us-east-1.amazonaws.com/api/v1/health
 - GitHub: https://github.com/minhnhut273/veribid
 
-The authenticated production walkthrough, live CloudWatch telemetry and a
-measured Bedrock cache benchmark are recorded under
-`docs/submission-proof/`. The benchmark uses provider-reported cache telemetry;
-the short production run is recorded separately and is not overstated as a
-cache hit.
+The prior authenticated synthetic production walkthrough, live CloudWatch
+telemetry and a measured Bedrock cache benchmark are recorded under
+`docs/submission-proof/`. The benchmark uses provider-reported cache telemetry:
+one controlled cold/warm pair recorded 4,801 cache-write tokens and 4,801
+cache-read tokens. This is not presented as p50, p95, a production-wide hit
+rate or guaranteed cost savings. A fresh post-remediation authenticated replay
+and deployment of the current export renderer remain release evidence tasks.
+
+Current format boundary: text-based DOCX, text-layer PDF and XLSX
+workbook/sheet/row evidence are supported. Scanned or image-heavy PDF and
+Textract are outside the current MVP.

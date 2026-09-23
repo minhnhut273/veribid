@@ -268,3 +268,53 @@ Before publishing, update the draft to explicitly state that the application is 
 **Submission proof missing:** 05, 06, 08, 09 (fresh authenticated), 11, 12 (fresh authenticated), 13, 14, and a final 17 capture; 19 remains UNKNOWN.  
 **Security issue:** AWS CLI identity is the account root; do not continue normal deployment or rotate credentials without an authorized least-privilege migration plan.  
 **Final readiness:** **CONDITIONAL GO** for a controlled, evidence-bounded MVP demo; **NO clean final submission GO yet** until the P0/P1 actions and proof recapture are complete.
+
+## 16. Post-remediation verification addendum 2026-09-23
+
+This addendum supersedes stale action wording above where it describes the
+state before the final clean-go remediation. It does not promote unavailable
+or historical evidence into current proof.
+
+### Remediation completed locally
+
+- `backend/api.py` now renders each `conflict_pair` with conflict type,
+  resolution status, both claim IDs, claim/evidence excerpt, document name and
+  type, SourcePointer ID, locator and content hash, plus verifier rationale.
+- The dependency-free PDF writer now wraps and paginates all export lines
+  instead of truncating the report to the first 48 lines.
+- `frontend/src/App.tsx` now shows SourcePointer IDs, document types and all
+  available locators, labels both conflict sides as evidence excerpts, and
+  makes `SYSTEM SUGGESTION`, `HUMAN DECISION` and override rationale explicit.
+- `backend/test_api_contract.py` adds a conflict export regression test for
+  both Markdown content and the paired source trace.
+- The five existing `.drawio` files were inspected as valid XML and match the
+  deployed Step Functions/Bedrock/Lambda baseline, conditional non-deployed
+  Textract boundary, excluded AgentCore/vector DB boundary and Human Review
+  authority. No diagram diff was present in this worktree, so no diagram file
+  was overwritten or committed by this remediation.
+
+### Current verification
+
+| Check | Result | Evidence boundary |
+|---|---|---|
+| Old AWS caller | OBSERVED | `aws sts get-caller-identity` returned the account root ARN before migration. |
+| New deployment caller | PASS | `aws --profile veribid-deploy sts get-caller-identity` returned the dedicated non-root IAM user ARN. |
+| Non-root CloudFormation read | PASS | The profile read `VeriBidStack`, `UPDATE_COMPLETE`, and deployed resources. |
+| Public root, `/demo`, health | PASS | HTTP 200 for all three live endpoints. |
+| Anonymous protected API | PASS | HTTP 401 for a protected evaluation route. |
+| Harness check | PASS | `python scripts/check_agent_harness.py`. |
+| Backend syntax | PASS | `python -m compileall -q backend`. |
+| Frontend type-check/build | PASS | `npm.cmd exec tsc -- --noEmit` and `npm.cmd run build`. |
+| Infra TypeScript build | PASS | `npm.cmd run build` in `infra`. |
+| Backend pytest | NOT RUNNABLE | `pytest` is not installed in the current Python environment. |
+| Direct export smoke | ENVIRONMENT FAILURE | Import failed because `pydantic` is not installed in the current Python environment. |
+| CDK synth/diff | ENVIRONMENT FAILURE | Docker Desktop Linux engine is unavailable; existing Lambda asset bundling fails with `FailedToBundleAsset`. |
+
+### Readiness decision after this addendum
+
+The current result remains **CONDITIONAL GO**, not CLEAN GO. The non-root
+deployment identity is now configured, but the patched backend/frontend have
+not been deployed because CDK asset bundling is blocked by the local Docker
+engine. A fresh authenticated eight-step run, current conflict UI/export
+proof, separate numbered 01–19 proof pack, and Builder Center project status
+remain unproven. No Builder Center publish/submit action was taken.

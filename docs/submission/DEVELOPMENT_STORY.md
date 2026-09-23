@@ -19,6 +19,10 @@ expose matrix/result detail, append-only reviews and evidence-trace exports.
 
 Codex used the existing AWS CLI/CDK/GitHub tooling, verified the live public
 foundation, and kept credentials and presigned URLs out of source and proof
-artifacts. The remaining release work is live authenticated acceptance after
-the expired AWS session is refreshed, followed by current-model Bedrock and
-cache telemetry verification.
+artifacts. The final remediation added a dedicated non-root deployment
+profile, expanded the result-detail trace, and made conflict pairs explicit in
+Markdown/PDF export. The existing authenticated synthetic acceptance and
+current-model Bedrock/cache evidence remain recorded, while a fresh
+post-remediation deployment and authenticated UI replay are still pending.
+The local deployment check is currently blocked by Docker Desktop being
+unavailable for CDK's existing Python Lambda asset bundling step.
