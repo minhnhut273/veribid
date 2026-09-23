@@ -56,10 +56,9 @@ matrix for review. Text-based DOCX, text-layer PDF, and XLSX evidence are in
 scope for this MVP. Scanned or image-heavy PDF and Textract are outside the
 current boundary.
 
-![Evidence Matrix](assets/evidence_matrix.png)
+![Evidence Matrix — public demo UI](assets/ui_public_matrix.png)
 
-*Illustrative evidence card based on the verified 3 × 3 fixture, not a UI
-screenshot.*
+*Read-only public demo screenshot using synthetic fixture data; not customer data.*
 
 The fresh production replay used three synthetic vendors and three
 requirements, producing a 3 × 3 matrix. This is a controlled demonstration
