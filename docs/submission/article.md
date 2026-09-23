@@ -14,8 +14,8 @@ behind a review visible, challengeable, and exportable.
 
 ![VeriBid Evidence Matrix cover](assets/cover.png)
 
-*Cover asset is a real application capture to be added before publication; the
-current package does not fabricate a screenshot.*
+*Illustrative cover card based on the verified synthetic fixture; replace or
+augment with a real redacted application capture before publication.*
 
 ## The contradiction that changes the workflow
 
@@ -30,8 +30,8 @@ and unresolved conflict metadata preserved together.
 
 ![Vendor A conflict detail](assets/conflict_story.png)
 
-*The final post should use the redacted authenticated UI capture for this
-section.*
+*Evidence card based on the verified conflict record, not a UI screenshot. Use
+the real redacted authenticated capture for the final post if available.*
 
 ## Why bid evaluation breaks down
 
@@ -58,6 +58,9 @@ current boundary.
 
 ![Evidence Matrix](assets/evidence_matrix.png)
 
+*Illustrative evidence card based on the verified 3 × 3 fixture, not a UI
+screenshot.*
+
 The fresh production replay used three synthetic vendors and three
 requirements, producing a 3 × 3 matrix. This is a controlled demonstration
 fixture, not customer usage or a market benchmark.
@@ -74,6 +77,9 @@ The most important result is sometimes a refusal to pretend certainty exists.
   `numeric_threshold_check · SATISFIED`, separately from semantic rationale.
 
 ![Explicit abstention](assets/abstention.png)
+
+*Illustrative evidence card based on the verified Vendor C result, not a UI
+screenshot.*
 
 ## Dual-path evaluation architecture
 
@@ -112,6 +118,8 @@ as part of this MVP.
 
 ## What the coding agent actually shipped
 
+![Coding agent to AWS delivery](assets/coding_agent_aws.png)
+
 The development story is concrete rather than a generic “AI helped code” claim:
 
 1. **Evidence-trace defect:** the agent inspected the live result path and
@@ -140,6 +148,9 @@ savings from this result.
 
 ![Prompt-cache telemetry](assets/prompt_cache.png)
 
+*Illustrative telemetry card based on the recorded provider metadata, not a
+CloudWatch screenshot.*
+
 ## Human review and defensible export
 
 The system suggestion is not the final decision. In the fresh replay, ACCEPT
@@ -154,6 +165,9 @@ data. The browser did not expose a local downloaded file, so this package does
 not claim one.
 
 ![Human review and export](assets/human_review_export.png)
+
+*Illustrative evidence card based on verified review/export records, not a UI
+screenshot.*
 
 ## Commercial path
 
