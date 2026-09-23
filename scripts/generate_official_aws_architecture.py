@@ -159,15 +159,11 @@ def main() -> None:
             cx = x + w / 2
             out.append(f'<circle cx="{cx:g}" cy="{y + 22:g}" r="14" fill="#232F3E"/>')
             out.append(f'<path d="M{x + 12:g},{y + 58:g} Q{cx:g},{y + 34:g} {x + w - 12:g},{y + 58:g} L{x + w - 12:g},{y + 70:g} L{x + 12:g},{y + 70:g} Z" fill="#232F3E"/>')
-            for i, line in enumerate(clean_lines(cell.get("value", ""))):
-                out.append(f'<text x="{cx:g}" y="{y + 90 + i * 14:g}" text-anchor="middle" font-family="Arial,sans-serif" font-size="10px" fill="#232F3E">{esc(line)}</text>')
             continue
         data = icon_data(s.get("resIcon", ""))
         if data:
             size = min(w, h, 82)
             out.append(f'<image href="{data}" x="{x + (w - size) / 2:g}" y="{y + 4:g}" width="{size:g}" height="{size:g}"/>')
-            for i, line in enumerate(clean_lines(cell.get("value", ""))):
-                out.append(f'<text x="{x + w / 2:g}" y="{y + 92 + i * 14:g}" text-anchor="middle" font-family="Arial,sans-serif" font-size="10px" fill="#232F3E">{esc(line)}</text>')
         else:
             out.append(render_text(cell))
 
