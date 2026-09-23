@@ -38,7 +38,8 @@ redeployed and accepted through a live synthetic Cognito workspace.
   preserved Vendor A contradiction, Vendor C abstentions, deterministic
   TCO/availability checks, ACCEPT plus rationale-backed OVERRIDE reviews with
   audit trace, and READY Markdown/PDF exports. Failed IAM retry records were
-  removed from this synthetic evaluation before the clean export proof.
+  removed before the clean export proof, and the synthetic evaluation, S3
+  objects and Cognito test user were deleted and verified absent afterward.
 - Production Bedrock acceptance: worker run `RUN_8ce16b2e2dcd4ff9` completed
   with `model_invocations=2`, `input_tokens=1099`, and `output_tokens=467`;
   CloudWatch reported `RunCompleted=1` and `ModelInvocations=2` in the live
