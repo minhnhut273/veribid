@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="850" viewBox="0 0 1600 850">
+  <rect width="1600" height="850" fill="#f8fafc"/>
+  <text x="80" y="74" fill="#0f172a" font-family="Arial,sans-serif" font-size="40" font-weight="700">VeriBid deployed AWS baseline</text>
+  <text x="80" y="112" fill="#475569" font-family="Arial,sans-serif" font-size="21">Evidence-grounded asynchronous workflow with human final authority.</text>
+  <g font-family="Arial,sans-serif">
+    <rect x="80" y="185" width="260" height="105" rx="18" fill="#e0f2fe" stroke="#0284c7" stroke-width="3"/><text x="210" y="230" text-anchor="middle" fill="#075985" font-size="24" font-weight="700">User</text><text x="210" y="263" text-anchor="middle" fill="#075985" font-size="19">browser + synthetic docs</text>
+    <rect x="410" y="185" width="270" height="105" rx="18" fill="#ede9fe" stroke="#7c3aed" stroke-width="3"/><text x="545" y="230" text-anchor="middle" fill="#5b21b6" font-size="24" font-weight="700">Amplify + Cognito</text><text x="545" y="263" text-anchor="middle" fill="#5b21b6" font-size="19">frontend + identity</text>
+    <rect x="750" y="185" width="270" height="105" rx="18" fill="#ffedd5" stroke="#ea580c" stroke-width="3"/><text x="885" y="230" text-anchor="middle" fill="#9a3412" font-size="24" font-weight="700">API Gateway</text><text x="885" y="263" text-anchor="middle" fill="#9a3412" font-size="19">public API boundary</text>
+    <rect x="1090" y="185" width="360" height="105" rx="18" fill="#dcfce7" stroke="#16a34a" stroke-width="3"/><text x="1270" y="230" text-anchor="middle" fill="#166534" font-size="24" font-weight="700">Lambda + Step Functions</text><text x="1270" y="263" text-anchor="middle" fill="#166534" font-size="19">async orchestration</text>
+    <rect x="180" y="430" width="300" height="125" rx="18" fill="#fef3c7" stroke="#d97706" stroke-width="3"/><text x="330" y="478" text-anchor="middle" fill="#92400e" font-size="24" font-weight="700">S3 + DynamoDB</text><text x="330" y="515" text-anchor="middle" fill="#92400e" font-size="19">documents + evidence</text>
+    <rect x="650" y="430" width="300" height="125" rx="18" fill="#dbeafe" stroke="#2563eb" stroke-width="3"/><text x="800" y="478" text-anchor="middle" fill="#1e40af" font-size="24" font-weight="700">Bedrock</text><text x="800" y="515" text-anchor="middle" fill="#1e40af" font-size="19">semantic path</text>
+    <rect x="1120" y="430" width="300" height="125" rx="18" fill="#fce7f3" stroke="#db2777" stroke-width="3"/><text x="1270" y="478" text-anchor="middle" fill="#9d174d" font-size="24" font-weight="700">Human Review</text><text x="1270" y="515" text-anchor="middle" fill="#9d174d" font-size="19">final decision authority</text>
+    <rect x="540" y="675" width="520" height="72" rx="36" fill="#1e293b"/><text x="800" y="720" text-anchor="middle" fill="#f8fafc" font-size="25" font-weight="700">CloudWatch → audit + operations</text>
+  </g>
+  <g stroke="#64748b" stroke-width="4" fill="none" marker-end="url(#arrow)">
+    <path d="M340 238 H410"/><path d="M680 238 H750"/><path d="M1020 238 H1090"/><path d="M1270 290 V430"/><path d="M1090 238 C900 330 650 350 480 490"/><path d="M1270 555 V675"/><path d="M950 490 H1120"/><path d="M650 490 H480"/>
+  </g>
+  <text x="80" y="805" fill="#64748b" font-family="Arial,sans-serif" font-size="18">Explanatory diagram based on the deployed resource inventory; not an AWS Console screenshot. Textract, AgentCore and a dedicated vector DB are outside this MVP.</text>
+  <defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#64748b"/></marker></defs>
+</svg>

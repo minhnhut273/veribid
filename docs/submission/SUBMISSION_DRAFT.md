@@ -75,8 +75,12 @@ Textract are outside the current MVP.
 ## Builder Center submission boundary
 
 The correct signed-in Builder Center account contains a VeriBid project in
-`DRAFT` state, but the draft fields are currently blank: title,
-description/content, category tag, lane tag, live URL and repository URL. The
-repository content above is the reviewed submission source, not a claim that
-those fields have already been entered or published. Originality/not-
-previously-published status requires user confirmation before publishing.
+`DRAFT` state. The title, description, Markdown content, tags, demo URL and
+repository URL have now been populated and the preview was verified. The
+cover and inline product screenshots remain intentionally unuploaded because
+real redacted captures were not available; no screenshot is fabricated.
+
+The repository package in `docs/submission/` is the reviewed source for the
+draft. Originality/not-previously-published status still requires user
+confirmation before publishing, and the final `Đăng` / Publish action remains
+a manual user action.

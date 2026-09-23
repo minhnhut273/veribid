@@ -2,10 +2,10 @@
 
 ## Current state
 
-Status: CONDITIONAL GO after final clean-go remediation — the patched backend
-and frontend are deployed and a fresh authenticated synthetic replay passed;
-Builder Center project exists as a DRAFT but its required submission fields
-are blank; browser-captured downloaded export files were not captured.
+Status: READY TO PUBLISH — USER ACTION REQUIRED — the patched backend and
+frontend are deployed, a fresh authenticated synthetic replay passed, and the
+Builder Center draft is populated and preview-verified. The final Publish,
+originality confirmation, and optional real screenshot uploads remain manual.
 
 Last verified: 2026-09-23
 
@@ -62,7 +62,7 @@ synthesized in CI and deployed with the non-root profile.
 | Project-local skill environment | PASS | `.agents/SOURCES.md`, `skills-lock.json` and setup script are present. |
 | Harness drift check | PASS | `python scripts/check_agent_harness.py` passed after the local-vs-external lock distinction was corrected. |
 | Product implementation | PASS | Current live authenticated workflow reached evaluation, Human Review and export; historical evidence is retained separately. |
-| AWS deployment / release proof | CONDITIONAL GO | Public URL, API health/demo, non-root deployment, fresh authenticated replay, current UI trace and READY export records are verified; Builder Center draft completion remains user action. |
+| AWS deployment / release proof | READY TO PUBLISH — USER ACTION REQUIRED | Public URL, API health/demo, non-root deployment, fresh authenticated replay, current UI trace, READY export records and populated Builder preview are verified; final Publish remains user action. |
 | Contract/domain core | PASS | Pydantic domain models, deterministic tools, verifier, parsers, review and export paths are covered by 22 backend tests. |
 
 ## Blockers and risks
@@ -74,7 +74,8 @@ synthesized in CI and deployed with the non-root profile.
 - Fresh post-remediation authenticated UI acceptance is proven by
   `EVL_4f323aba9796446f` and the 01–19 proof inventory is recorded with
   explicit boundaries. Builder Center project exists in the correct signed-in
-  account as a DRAFT, but its required submission fields are blank.
+  account as a populated DRAFT with a verified preview; real screenshots and
+  originality confirmation remain publication boundaries.
 - Production Bedrock uses the verified Sonnet 4.5 global inference profile with
   prompt-cache support enabled. The benchmark's provider-reported cache hit is
   the authoritative cache evidence; the short controlled production run did

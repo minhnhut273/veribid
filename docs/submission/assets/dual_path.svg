@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="700" viewBox="0 0 1600 700">
+  <rect width="1600" height="700" fill="#07111f"/>
+  <text x="80" y="82" fill="#f8fafc" font-family="Arial,sans-serif" font-size="42" font-weight="700">VeriBid dual-path evaluation</text>
+  <text x="80" y="124" fill="#9fb3c8" font-family="Arial,sans-serif" font-size="22">Semantic reasoning where language is ambiguous; deterministic code where correctness is calculable.</text>
+  <rect x="80" y="190" width="610" height="350" rx="28" fill="#102a43" stroke="#5eead4" stroke-width="3"/>
+  <text x="125" y="255" fill="#5eead4" font-family="Arial,sans-serif" font-size="30" font-weight="700">Semantic path</text>
+  <text x="125" y="305" fill="#e2e8f0" font-family="Arial,sans-serif" font-size="24">Bedrock adapter</text>
+  <text x="125" y="350" fill="#e2e8f0" font-family="Arial,sans-serif" font-size="24">specialist reasoning</text>
+  <text x="125" y="395" fill="#e2e8f0" font-family="Arial,sans-serif" font-size="24">claim extraction + rationale</text>
+  <text x="125" y="465" fill="#fbbf24" font-family="Arial,sans-serif" font-size="22">Must resolve to SourcePointers</text>
+  <rect x="910" y="190" width="610" height="350" rx="28" fill="#172b1d" stroke="#86efac" stroke-width="3"/>
+  <text x="955" y="255" fill="#86efac" font-family="Arial,sans-serif" font-size="30" font-weight="700">Deterministic path</text>
+  <text x="955" y="305" fill="#e2e8f0" font-family="Arial,sans-serif" font-size="24">thresholds + SLA checks</text>
+  <text x="955" y="350" fill="#e2e8f0" font-family="Arial,sans-serif" font-size="24">TCO + formulas + totals</text>
+  <text x="955" y="395" fill="#e2e8f0" font-family="Arial,sans-serif" font-size="24">weighted scores</text>
+  <text x="955" y="465" fill="#fbbf24" font-family="Arial,sans-serif" font-size="22">Arithmetic stays authoritative</text>
+  <path d="M690 365 H900" stroke="#f8fafc" stroke-width="6" marker-end="url(#arrow)"/>
+  <text x="740" y="340" fill="#f8fafc" font-family="Arial,sans-serif" font-size="20">typed result</text>
+  <rect x="430" y="590" width="740" height="64" rx="32" fill="#3b1d5a" stroke="#c4b5fd" stroke-width="2"/>
+  <text x="800" y="632" text-anchor="middle" fill="#ede9fe" font-family="Arial,sans-serif" font-size="23" font-weight="700">Skeptical Verifier → Human Review → Audit Trail</text>
+  <defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#f8fafc"/></marker></defs>
+</svg>
