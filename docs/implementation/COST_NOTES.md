@@ -16,5 +16,7 @@ measured bill until the account cost view is queried.
 - Keep asynchronous runs bounded and record actual telemetry before making
   cache or latency claims.
 - Recheck CloudWatch and Cost Explorer after a real acceptance run.
+- The 2026-09-23 acceptance run produced two Bedrock model invocations and one
+  completed run metric; this is operational evidence, not a billing estimate.
 - The current deployment used the root identity and therefore remains a
   security/operations risk even if the resource footprint is small.

@@ -41,6 +41,10 @@ No vector database is provisioned.
 
 Decision: do not hard-code a model or API from memory. Query current AWS documentation and verify account/model availability immediately before implementing the Bedrock adapter.
 
-Status: pending AWS documentation/model availability check. No Bedrock model is
-hard-coded yet; semantic specialist work must record the current model/API and
-actual runtime telemetry before deployment.
+Status: active and verified on 2026-09-23. The production worker uses the
+Claude Sonnet 4.5 global inference profile through the Bedrock Converse API,
+with IAM permission for the profile and resolved foundation-model resources.
+Prompt caching is enabled where the provider supports it; the controlled
+benchmark records provider-reported cold write and warm read telemetry, while
+the short production run records model invocation telemetry without claiming a
+cache hit when the provider fields are null.
