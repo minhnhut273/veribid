@@ -2,25 +2,28 @@ from __future__ import annotations
 
 import base64
 import html
+import re
+import xml.etree.ElementTree as ET
 from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
 ASSETS = ROOT / "docs" / "submission" / "assets"
+SOURCE = ROOT / "Document" / "Phase_1" / "Diagram" / "System_architecture" / "VeriBid_AWS_System_Architecture_v0.1.drawio"
 ICON_ROOT = Path.home() / "AppData" / "Local" / "Temp" / "veribid-aws-architecture-icons"
 
-
-ICONS = {
-    "amplify": ICON_ROOT / "Architecture-Service-Icons_02072025" / "Arch_Front-End-Web-Mobile" / "64" / "Arch_AWS-Amplify_64.png",
-    "cognito": ICON_ROOT / "Architecture-Service-Icons_02072025" / "Arch_Security-Identity-Compliance" / "64" / "Arch_Amazon-Cognito_64.png",
-    "api": ICON_ROOT / "Architecture-Service-Icons_02072025" / "Arch_Networking-Content-Delivery" / "64" / "Arch_Amazon-API-Gateway_64.png",
-    "lambda": ICON_ROOT / "Architecture-Service-Icons_02072025" / "Arch_Compute" / "64" / "Arch_AWS-Lambda_64.png",
-    "step": ICON_ROOT / "Architecture-Service-Icons_02072025" / "Arch_App-Integration" / "64" / "Arch_AWS-Step-Functions_64.png",
-    "s3": ICON_ROOT / "Architecture-Service-Icons_02072025" / "Arch_Storage" / "64" / "Arch_Amazon-Simple-Storage-Service_64.png",
-    "ddb": ICON_ROOT / "Architecture-Service-Icons_02072025" / "Arch_Database" / "64" / "Arch_Amazon-DynamoDB_64.png",
-    "bedrock": ICON_ROOT / "Architecture-Service-Icons_02072025" / "Arch_Artificial-Intelligence" / "64" / "Arch_Amazon-Bedrock_64.png",
-    "watch": ICON_ROOT / "Architecture-Service-Icons_02072025" / "Arch_Management-Governance" / "64" / "Arch_Amazon-CloudWatch_64.png",
-    "iam": ICON_ROOT / "Architecture-Service-Icons_02072025" / "Arch_Security-Identity-Compliance" / "64" / "Arch_AWS-Identity-and-Access-Management_64.png",
+ICON_PATHS = {
+    "amplify": "Architecture-Service-Icons_02072025/Arch_Front-End-Web-Mobile/64/Arch_AWS-Amplify_64.png",
+    "cognito": "Architecture-Service-Icons_02072025/Arch_Security-Identity-Compliance/64/Arch_Amazon-Cognito_64.png",
+    "api_gateway": "Architecture-Service-Icons_02072025/Arch_Networking-Content-Delivery/64/Arch_Amazon-API-Gateway_64.png",
+    "lambda": "Architecture-Service-Icons_02072025/Arch_Compute/64/Arch_AWS-Lambda_64.png",
+    "step_functions": "Architecture-Service-Icons_02072025/Arch_App-Integration/64/Arch_AWS-Step-Functions_64.png",
+    "s3": "Architecture-Service-Icons_02072025/Arch_Storage/64/Arch_Amazon-Simple-Storage-Service_64.png",
+    "dynamodb": "Architecture-Service-Icons_02072025/Arch_Database/64/Arch_Amazon-DynamoDB_64.png",
+    "bedrock": "Architecture-Service-Icons_02072025/Arch_Artificial-Intelligence/64/Arch_Amazon-Bedrock_64.png",
+    "cloudwatch": "Architecture-Service-Icons_02072025/Arch_Management-Governance/64/Arch_Amazon-CloudWatch_64.png",
+    "identity_and_access_management": "Architecture-Service-Icons_02072025/Arch_Security-Identity-Compliance/64/Arch_AWS-Identity-and-Access-Management_64.png",
+    "textract": "Architecture-Service-Icons_02072025/Arch_Artificial-Intelligence/64/Arch_Amazon-Textract_64.png",
 }
 
 
@@ -28,116 +31,151 @@ def esc(value: str) -> str:
     return html.escape(value, quote=True)
 
 
-def icon_data(name: str) -> str:
-    path = ICONS[name]
+def style_map(style: str) -> dict[str, str]:
+    result: dict[str, str] = {}
+    for item in style.split(";"):
+        if "=" in item:
+            key, value = item.split("=", 1)
+            result[key] = value
+    return result
+
+
+def clean_lines(value: str) -> list[str]:
+    value = html.unescape(value or "")
+    value = re.sub(r"<br\s*/?>", "\n", value, flags=re.I)
+    value = re.sub(r"<[^>]+>", "", value)
+    return [line.strip() for line in value.splitlines() if line.strip()]
+
+
+def icon_data(res_icon: str) -> str | None:
+    key = res_icon.removeprefix("mxgraph.aws4.")
+    relative = ICON_PATHS.get(key)
+    if not relative:
+        return None
+    path = ICON_ROOT / relative
     if not path.exists():
-        raise FileNotFoundError(path)
+        return None
     return "data:image/png;base64," + base64.b64encode(path.read_bytes()).decode("ascii")
 
 
-def node(x: int, y: int, icon: str, title: str, subtitle: str, tone: str = "orange") -> str:
-    colors = {
-        "orange": ("#fff7ed", "#f97316"),
-        "purple": ("#faf5ff", "#8b5cf6"),
-        "pink": ("#fdf2f8", "#db2777"),
-        "green": ("#f0fdf4", "#16a34a"),
-        "teal": ("#ecfeff", "#0f766e"),
-        "blue": ("#eff6ff", "#2563eb"),
-        "slate": ("#f8fafc", "#475569"),
-    }
-    fill, stroke = colors[tone]
-    return f'''<g transform="translate({x},{y})">
-  <rect x="0" y="0" width="220" height="176" rx="18" fill="{fill}" stroke="{stroke}" stroke-width="2"/>
-  <image href="{icon_data(icon)}" x="78" y="14" width="64" height="64"/>
-  <text x="110" y="104" text-anchor="middle" class="service">{esc(title)}</text>
-  <text x="110" y="130" text-anchor="middle" class="detail">{esc(subtitle)}</text>
-</g>'''
+def geometry(cell: ET.Element) -> tuple[float, float, float, float]:
+    g = cell.find("mxGeometry")
+    if g is None:
+        return 0, 0, 0, 0
+    return tuple(float(g.get(name, 0)) for name in ("x", "y", "width", "height"))  # type: ignore[return-value]
 
 
-def human_node(x: int, y: int, title: str, subtitle: str) -> str:
-    return f'''<g transform="translate({x},{y})">
-  <rect x="0" y="0" width="220" height="176" rx="18" fill="#f8fafc" stroke="#475569" stroke-width="2"/>
-  <circle cx="110" cy="42" r="18" fill="#475569"/>
-  <path d="M76 76 Q110 52 144 76 L144 88 L76 88 Z" fill="#475569"/>
-  <text x="110" y="116" text-anchor="middle" class="service">{esc(title)}</text>
-  <text x="110" y="142" text-anchor="middle" class="detail">{esc(subtitle)}</text>
-</g>'''
+def edge_points(cell: ET.Element) -> list[tuple[float, float]]:
+    g = cell.find("mxGeometry")
+    if g is None:
+        return []
+    array = g.find("Array")
+    if array is None:
+        return []
+    return [(float(p.get("x", 0)), float(p.get("y", 0))) for p in array.findall("mxPoint")]
 
 
-def arrow(x1: int, y1: int, x2: int, y2: int, label: str = "", dashed: bool = False) -> str:
-    dash = ' stroke-dasharray="7 6"' if dashed else ""
-    label_svg = ""
-    if label:
-        mx, my = (x1 + x2) // 2, (y1 + y2) // 2 - 8
-        label_svg = f'<text x="{mx}" y="{my}" text-anchor="middle" class="edge-label">{esc(label)}</text>'
-    return f'<path d="M{x1},{y1} L{x2},{y2}" class="edge"{dash} marker-end="url(#arrow)"/>{label_svg}'
+def port(cell: ET.Element, kind: str, default_x: float, default_y: float) -> tuple[float, float]:
+    x, y, w, h = geometry(cell)
+    s = style_map(cell.get("style", ""))
+    px = float(s.get(f"{kind}X", default_x))
+    py = float(s.get(f"{kind}Y", default_y))
+    return x + w * px, y + h * py
+
+
+def render_text(cell: ET.Element) -> str:
+    x, y, w, h = geometry(cell)
+    s = style_map(cell.get("style", ""))
+    lines = clean_lines(cell.get("value", ""))
+    if not lines:
+        return ""
+    fill = s.get("fillColor", "none")
+    stroke = s.get("strokeColor", "none")
+    radius = 8 if s.get("rounded") == "1" else 0
+    out = []
+    if fill != "none":
+        out.append(f'<rect x="{x:g}" y="{y:g}" width="{w:g}" height="{h:g}" rx="{radius}" fill="{fill}" stroke="{stroke}" stroke-width="1.5"/>')
+    align = s.get("align", "center")
+    anchor = {"left": "start", "right": "end", "center": "middle"}.get(align, "middle")
+    tx = x + (12 if anchor == "start" else w - 12 if anchor == "end" else w / 2)
+    font_size = int(s.get("fontSize", "12"))
+    weight = "700" if s.get("fontStyle") == "1" else "400"
+    color = s.get("fontColor", "#334155")
+    line_height = font_size + 4
+    first_y = y + max(font_size + 4, (h - line_height * len(lines)) / 2 + font_size)
+    for i, line in enumerate(lines):
+        out.append(f'<text x="{tx:g}" y="{first_y + i * line_height:g}" text-anchor="{anchor}" font-family="Arial,sans-serif" font-size="{font_size}px" font-weight="{weight}" fill="{color}">{esc(line)}</text>')
+    return "".join(out)
 
 
 def main() -> None:
-    ASSETS.mkdir(parents=True, exist_ok=True)
-    svg = f'''<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="1600" height="1040" viewBox="0 0 1600 1040">
-<defs>
-  <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#64748b"/></marker>
-  <style>
-    .title {{ font: 700 34px Arial, sans-serif; fill: #0f172a; }}
-    .subtitle {{ font: 18px Arial, sans-serif; fill: #475569; }}
-    .tier {{ font: 700 16px Arial, sans-serif; fill: #334155; }}
-    .service {{ font: 700 16px Arial, sans-serif; fill: #1e293b; }}
-    .detail {{ font: 14px Arial, sans-serif; fill: #475569; }}
-    .edge {{ fill: none; stroke: #64748b; stroke-width: 3; }}
-    .edge-label {{ font: 12px Arial, sans-serif; fill: #475569; paint-order: stroke; stroke: #f8fafc; stroke-width: 5px; }}
-    .note {{ font: 14px Arial, sans-serif; fill: #475569; }}
-    .small {{ font: 12px Arial, sans-serif; fill: #64748b; }}
-  </style>
-</defs>
-<rect width="1600" height="1040" fill="#f8fafc"/>
-<text x="70" y="58" class="title">VeriBid — AWS System Architecture</text>
-<text x="70" y="88" class="subtitle">Evidence-grounded asynchronous evaluation with human final authority</text>
-<rect x="45" y="118" width="1510" height="820" rx="24" fill="#ffffff" stroke="#94a3b8" stroke-width="2" stroke-dasharray="10 7"/>
-<text x="75" y="153" class="tier">AWS Cloud • VeriBid MVP baseline</text>
+    tree = ET.parse(SOURCE)
+    graph = tree.getroot().find("diagram/mxGraphModel/root")
+    if graph is None:
+        raise RuntimeError(f"No graph root in {SOURCE}")
+    cells = {cell.get("id"): cell for cell in graph.findall("mxCell") if cell.get("id")}
+    nodes = [cell for cell in cells.values() if cell.get("vertex") == "1"]
+    edges = [cell for cell in cells.values() if cell.get("edge") == "1"]
+    out = ['''<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="1000" viewBox="0 0 1800 1000">
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#64748b"/></marker></defs>
+<rect width="1800" height="1000" fill="#ffffff"/>''']
 
-<rect x="75" y="180" width="1450" height="205" rx="18" fill="#f8fafc" stroke="#cbd5e1"/>
-<text x="100" y="212" class="tier">ACCESS &amp; ASYNC CONTROL PLANE</text>
-{node(105, 225, "amplify", "AWS Amplify", "React frontend", "purple")}
-{node(365, 225, "cognito", "Amazon Cognito", "JWT identity", "pink")}
-{node(625, 225, "api", "Amazon API Gateway", "/api/v1 boundary", "pink")}
-{node(885, 225, "lambda", "AWS Lambda", "API handler", "orange")}
-{node(1145, 225, "step", "AWS Step Functions", "async workflow", "pink")}
+    for cell in nodes:
+        cid = cell.get("id", "")
+        if cid == "awscloud":
+            x, y, w, h = geometry(cell)
+            out.append(f'<rect x="{x:g}" y="{y:g}" width="{w:g}" height="{h:g}" rx="12" fill="#ffffff" stroke="#879196" stroke-width="2"/>')
+            out.append(f'<text x="{x + 44:g}" y="{y + 28:g}" font-family="Arial,sans-serif" font-size="14px" font-weight="700" fill="#232F3E">AWS Cloud — VeriBid Production</text>')
+        elif cid.startswith("lane_"):
+            x, y, w, h = geometry(cell)
+            fill = style_map(cell.get("style", "")).get("fillColor", "#f8fafc")
+            out.append(f'<rect x="{x:g}" y="{y:g}" width="{w:g}" height="{h:g}" rx="8" fill="{fill}" stroke="#cbd5e1" stroke-width="1.5"/>')
+            lines = clean_lines(cell.get("value", ""))
+            if lines:
+                out.append(f'<text x="{x + 14:g}" y="{y + 22:g}" font-family="Arial,sans-serif" font-size="11px" font-weight="700" fill="#4b5563">{esc(lines[0])}</text>')
 
-<rect x="75" y="415" width="1450" height="250" rx="18" fill="#ffffff" stroke="#cbd5e1"/>
-<text x="100" y="447" class="tier">EVIDENCE, SEMANTIC + DETERMINISTIC EVALUATION PATHS</text>
-{node(145, 475, "s3", "Amazon S3", "source docs + artifacts", "orange")}
-{node(465, 475, "bedrock", "Amazon Bedrock", "evaluators + verifier", "teal")}
-{node(785, 475, "lambda", "AWS Lambda", "rules / TCO / scoring", "orange")}
-{node(1105, 475, "ddb", "Amazon DynamoDB", "domain state + audit", "blue")}
+    for cell in edges:
+        source = cells.get(cell.get("source"))
+        target = cells.get(cell.get("target"))
+        if source is None or target is None:
+            continue
+        points = [port(source, "exit", 1, 0.5), *edge_points(cell), port(target, "entry", 0, 0.5)]
+        d = " ".join(("M" if i == 0 else "L") + f"{x:g},{y:g}" for i, (x, y) in enumerate(points))
+        s = style_map(cell.get("style", ""))
+        dash = ' stroke-dasharray="6 5"' if s.get("dashed") == "1" else ""
+        out.append(f'<path d="{d}" fill="none" stroke="{s.get("strokeColor", "#64748b")}" stroke-width="{s.get("strokeWidth", "1.5")}"{dash} marker-end="url(#arrow)"/>')
+        label = clean_lines(cell.get("value", ""))
+        if label:
+            mx, my = points[len(points) // 2]
+            out.append(f'<text x="{mx:g}" y="{my - 7:g}" text-anchor="middle" font-family="Arial,sans-serif" font-size="10px" fill="#475569" paint-order="stroke" stroke="#ffffff" stroke-width="4">{esc(label[0])}</text>')
 
-<rect x="75" y="695" width="1450" height="205" rx="18" fill="#f8fafc" stroke="#cbd5e1"/>
-<text x="100" y="727" class="tier">HUMAN REVIEW, EXPORT &amp; OBSERVABILITY</text>
-{human_node(375, 750, "Human Review", "final authority")}
-{node(695, 750, "lambda", "AWS Lambda", "defensible export", "orange")}
-{node(1015, 750, "watch", "Amazon CloudWatch", "logs + metrics", "green")}
+    for cell in nodes:
+        cid = cell.get("id", "")
+        if cid in {"0", "1", "awscloud"} or cid.startswith("lane_"):
+            continue
+        x, y, w, h = geometry(cell)
+        s = style_map(cell.get("style", ""))
+        if s.get("resIcon", "").endswith(".user") or s.get("shape", "").endswith(".user"):
+            cx = x + w / 2
+            out.append(f'<circle cx="{cx:g}" cy="{y + 22:g}" r="14" fill="#232F3E"/>')
+            out.append(f'<path d="M{x + 12:g},{y + 58:g} Q{cx:g},{y + 34:g} {x + w - 12:g},{y + 58:g} L{x + w - 12:g},{y + 70:g} L{x + 12:g},{y + 70:g} Z" fill="#232F3E"/>')
+            for i, line in enumerate(clean_lines(cell.get("value", ""))):
+                out.append(f'<text x="{cx:g}" y="{y + 90 + i * 14:g}" text-anchor="middle" font-family="Arial,sans-serif" font-size="10px" fill="#232F3E">{esc(line)}</text>')
+            continue
+        data = icon_data(s.get("resIcon", ""))
+        if data:
+            size = min(w, h, 82)
+            out.append(f'<image href="{data}" x="{x + (w - size) / 2:g}" y="{y + 4:g}" width="{size:g}" height="{size:g}"/>')
+            for i, line in enumerate(clean_lines(cell.get("value", ""))):
+                out.append(f'<text x="{x + w / 2:g}" y="{y + 92 + i * 14:g}" text-anchor="middle" font-family="Arial,sans-serif" font-size="10px" fill="#232F3E">{esc(line)}</text>')
+        else:
+            out.append(render_text(cell))
 
-{arrow(325, 313, 365, 313, "sign in")}
-{arrow(585, 313, 625, 313, "REST")}
-{arrow(845, 313, 885, 313, "invoke")}
-{arrow(1105, 313, 1145, 313, "start execution")}
-{arrow(475, 401, 255, 475, "upload", True)}
-{arrow(1255, 401, 255, 475, "read / persist")}
-{arrow(1255, 401, 465, 475, "semantic")}
-{arrow(1255, 401, 785, 475, "deterministic")}
-{arrow(1255, 401, 1215, 475, "state")}
-{arrow(575, 651, 485, 750, "review")}
-{arrow(895, 651, 805, 750, "export")}
-{arrow(1215, 651, 1125, 750, "telemetry", True)}
-{arrow(1225, 651, 1215, 651, "", True)}
-
-<rect x="75" y="958" width="1450" height="48" rx="12" fill="#eef2ff" stroke="#c7d2fe"/>
-<text x="95" y="988" class="note">MVP boundary: Amplify, Cognito, API Gateway, Lambda, Step Functions, Bedrock, S3, DynamoDB and CloudWatch. Human review remains the final decision authority.</text>
-<text x="1525" y="1028" text-anchor="end" class="small">AWS Architecture Icons used for service nodes • explanatory diagram, not an AWS Console screenshot</text>
-</svg>'''
-    svg_path = ASSETS / "aws_architecture_official.svg"
-    svg_path.write_text(svg, encoding="utf-8")
-    print(svg_path)
+    out.append('<text x="215" y="955" font-family="Arial,sans-serif" font-size="10px" fill="#475569">Solid = request/data/control flow   Dashed = upload, observability or conditional path   AgentCore and dedicated vector DB are excluded.</text>')
+    out.append("</svg>")
+    path = ASSETS / "aws_architecture_official.svg"
+    path.write_text("\n".join(out), encoding="utf-8")
+    print(path)
 
 
 if __name__ == "__main__":
