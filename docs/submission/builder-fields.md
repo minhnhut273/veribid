@@ -17,7 +17,8 @@ replace or augment with a real redacted Evidence Matrix screenshot before
 publication. Do not present the card as a UI screenshot.
 
 Inline explanatory diagrams are ready as `assets/dual_path.png` and
-`assets/aws_architecture.png`; they are diagrams, not product or AWS Console
+`assets/aws_architecture_official.png`; the architecture uses AWS Architecture
+Icons and is not a product UI or AWS Console
 screenshots.
 
 The saved Builder body uses nine visible links to the committed PNG

@@ -10,7 +10,7 @@ presigned URLs, account identifiers, and confidential vendor material.
 | `evidence_matrix.png` | illustrative evidence card | READY_WITH_BOUNDARY | Matrix section | Generated from the verified 3 × 3 synthetic fixture; not a UI screenshot |
 | `abstention.png` | illustrative evidence card | READY_WITH_BOUNDARY | Vendor C section | Generated from verified `INSUFFICIENT_EVIDENCE`; not a UI screenshot |
 | `dual_path.svg` / `dual_path.png` | explanatory diagram | READY | Semantic vs deterministic path | SVG source plus rendered PNG; generated from verified architecture/contract boundaries; not console evidence |
-| `aws_architecture.svg` / `aws_architecture.png` | explanatory diagram | READY | AWS architecture section | SVG source plus rendered PNG; generated from deployed service inventory and architecture proof |
+| `aws_architecture_official.svg` / `aws_architecture_official.png` | explanatory AWS architecture diagram | READY | AWS architecture section | Rendered from the verified MVP topology using AWS Architecture Icons; not an AWS Console screenshot |
 | `coding_agent_aws.png` | evidence card | READY_WITH_BOUNDARY | Development story | Generated from verified delivery episodes; not a CI screenshot |
 | `prompt_cache.png` | evidence card | READY_WITH_BOUNDARY | Cache section | Generated from verified provider telemetry; not a CloudWatch screenshot |
 | `human_review_export.png` | evidence card | READY_WITH_BOUNDARY | Review/export section | Generated from verified review/export records; not a UI screenshot |
@@ -20,6 +20,5 @@ SVG/PNG visuals are explanatory assets and are clearly classified as
 `DESIGN-INTENT` in the claim register.
 
 The rendered PNG diagrams are committed and publicly reachable from the
-repository. The saved Builder article exposes nine visible links to these PNG
-assets; Builder rejected external Markdown image syntax during draft save, so
-inline image rendering and native cover upload remain unverified.
+repository. Builder receives these assets through native inline image upload;
+the article links remain a fallback for source traceability.

@@ -18,9 +18,8 @@ Only claims classified `VERIFIED` are written as completed product facts in
 | C-10 | One controlled cold/warm pair reported 4,801 cache-write and 4,801 cache-read tokens. | VERIFIED | `15_prompt_cache.md`, `CACHE_BENCHMARK.md`; sample size one pair only |
 | C-11 | The MVP supports text-based DOCX, text-layer PDF, and XLSX evidence. | VERIFIED | `SUBMISSION_DRAFT.md`, implementation audit; scanned/image-heavy PDF is out of scope |
 | C-12 | Amplify, Cognito, API Gateway, Lambda, Step Functions, S3, DynamoDB, Bedrock, and CloudWatch are in the deployed baseline. | VERIFIED | `03_aws_resources.md`, `17_architecture_diagram.md` |
-| C-13 | The architecture diagram in this package is an explanatory design asset, not AWS Console evidence. | DESIGN-INTENT | `assets/aws_architecture.svg`, `assets/dual_path.svg` |
+| C-13 | The architecture diagram in this package is an explanatory design asset using AWS Architecture Icons, not AWS Console evidence. | DESIGN-INTENT | `assets/aws_architecture_official.svg`, `assets/dual_path.svg` |
 | C-14 | p50/p95, production-wide cache hit rate, guaranteed savings, latency improvement, customer usage, or market size. | BLOCKED | No supporting measurement or customer evidence; do not publish as facts |
 | C-15 | Scanned-PDF/Textract support, AgentCore, or a dedicated vector database are deployed MVP capabilities. | BLOCKED | Explicitly outside current MVP boundary |
 | C-16 | The project is original and was not previously published. | BLOCKED | Requires user confirmation before Publish |
 | C-17 | A local downloaded export file or real product screenshots are included in this repository package. | BLOCKED | Browser download/screenshot files were not captured; do not fabricate |
-

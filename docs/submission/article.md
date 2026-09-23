@@ -111,7 +111,7 @@ Functions, S3, DynamoDB, Bedrock, and CloudWatch. The workflow is asynchronous:
 4. persist verified results;
 5. review and export a defensible report.
 
-![AWS architecture](assets/aws_architecture.png)
+![AWS architecture using AWS Architecture Icons](assets/aws_architecture_official.png)
 
 AgentCore, a dedicated vector database, and deployed Textract are not claimed
 as part of this MVP.
