@@ -67,3 +67,13 @@ def test_semantic_branch_keeps_route_when_bedrock_returns_typed_output(monkeypat
     persisted = next(item for item in table.items if item.get("sk", "").startswith("RES#"))
     assert result["result_count"] == 1
     assert persisted["specialist"] == "COMPLIANCE_SPECIALIST"
+
+
+def test_requirement_extraction_retry_is_idempotent(monkeypatch):
+    requirement = {"requirement_id": "REQ_1", "requirement_code": "TECH-01", "weight": 10}
+    table = FakeTable([{"sk": "REQ#REQ_1", "payload": requirement}])
+    monkeypatch.setattr(worker, "_clients", lambda: (table, object()))
+    result = worker._extract_requirements({"evaluation_id": "EVL_1", "job_id": "JOB_2"})
+    assert result["idempotent"] is True
+    assert result["requirement_count"] == 1
+    assert len(table.items) == 1

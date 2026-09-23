@@ -1,20 +1,27 @@
 # VeriBid Acceptance Results
 
-Status: IN PROGRESS
+Status: IN PROGRESS — public and authenticated vertical slice accepted; cache
+benchmark and final hardening remain.
 
-Executed local evidence currently includes 19 backend tests, frontend build and
-test, strict CDK synth, a live public health response, a live public demo
-response, and a successful Amplify manual deployment. The local contract path
-now also covers specialist routing, append-only review/matrix final decisions,
-and dependency-free PDF export bytes. Authenticated workspace, two-phase
-upload, worker ingestion, extraction, evaluation, review and export acceptance
-still require live credential refresh and execution.
+Executed local evidence includes 22 backend tests, frontend build/test, CDK
+build/synth, a live public health response, a live public demo response, and a
+successful Amplify manual deployment. The contract path covers specialist
+routing, append-only review/matrix final decisions, DynamoDB Decimal handling,
+idempotent extraction retry, and dependency-free PDF export bytes.
 
-Production browser verification also found that the prior Amplify SPA rewrite
-returned HTML for Vite asset URLs, so the React root was empty even though the
-document request returned 200. This is recorded as a release blocker rather
-than a false PASS; commit `7ef8252` contains the extension-aware rewrite fix
-and requires redeployment before the landing/demo UI can be accepted.
+Production browser verification initially found that the prior Amplify SPA
+rewrite returned HTML for Vite asset URLs. The extension-aware rewrite fix was
+deployed as Amplify manual deployment job 4; the asset now returns JavaScript,
+the landing page shows `API connected`, and `/demo` renders the seeded matrix.
+
+The live authenticated proof used synthetic evaluation `EVL_f98cc9cc335d4ccd`:
+three DOCX uploads were verified and scoped to two vendors, worker ingestion
+and requirement extraction succeeded, the evaluation reached
+`READY_FOR_REVIEW`, the matrix exposed `COMMERCIAL_SPECIALIST` and
+`COMPLIANCE_SPECIALIST`, an ACCEPT review and a rationale-backed OVERRIDE
+review were appended, and both Markdown and PDF exports were stored READY.
+The synthetic Cognito user, DDB evaluation records, S3 evidence objects and
+temporary credential file were removed after verification.
 
 The pushed implementation commit `2c0f751` passed GitHub Actions run
 [`35778614955`](https://github.com/minhnhut273/veribid/actions/runs/35778614955)

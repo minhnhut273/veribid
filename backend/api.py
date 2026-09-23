@@ -10,6 +10,7 @@ from __future__ import annotations
 import base64
 import json
 import os
+from decimal import Decimal
 from pathlib import PurePath
 from datetime import datetime, timedelta, timezone
 from typing import Any
@@ -21,9 +22,9 @@ except ImportError:  # Local package tests.
     from .health import _demo_fixture
 
 try:
-    from .domain import EvaluationState, HumanReview, ReviewAction
+    from .domain import EvaluationState, HumanReview, ReviewAction, ddb_safe
 except ImportError:
-    from domain import EvaluationState, HumanReview, ReviewAction  # type: ignore
+    from domain import EvaluationState, HumanReview, ReviewAction, ddb_safe  # type: ignore
 
 
 EVALUATION_STATUSES = {
@@ -114,7 +115,8 @@ def _pdf_bytes(text: str) -> bytes:
 
 def _render_export(table: Any, evaluation_id: str) -> str:
     requirements = [item["payload"] for item in table.query(KeyConditionExpression="pk = :pk AND begins_with(sk, :prefix)", ExpressionAttributeValues={":pk": f"EVAL#{evaluation_id}", ":prefix": "REQ#"}).get("Items", [])]
-    results = [item["payload"] for item in table.query(KeyConditionExpression="pk = :pk AND begins_with(sk, :prefix)", ExpressionAttributeValues={":pk": f"EVAL#{evaluation_id}", ":prefix": "RES#"}).get("Items", [])]
+    result_items = table.query(KeyConditionExpression="pk = :pk AND begins_with(sk, :prefix)", ExpressionAttributeValues={":pk": f"EVAL#{evaluation_id}", ":prefix": "RES#"}).get("Items", [])
+    results = [item["payload"] for item in result_items]
     reviews = _latest_reviews(table, evaluation_id)
     by_requirement = {requirement["requirement_id"]: requirement for requirement in requirements}
     lines = [
@@ -157,8 +159,15 @@ def _response(status: int, body: dict[str, Any], event: dict[str, Any]) -> dict[
             "cache-control": "no-store",
             "access-control-allow-origin": "*",
         },
-        "body": json.dumps(body, separators=(",", ":")),
+        "body": json.dumps(body, separators=(",", ":"), default=_json_default),
     }
+
+
+def _json_default(value: Any) -> Any:
+    """Return DynamoDB Decimal values as JSON numbers at the API boundary."""
+    if isinstance(value, Decimal):
+        return int(value) if value == value.to_integral_value() else float(value)
+    raise TypeError(f"Object of type {type(value).__name__} is not JSON serializable")
 
 
 def _success(data: Any, event: dict[str, Any], status: int = 200, next_cursor: Any = None) -> dict[str, Any]:
@@ -401,7 +410,9 @@ def _matrix(event: dict[str, Any], evaluation_id: str) -> dict[str, Any]:
         return _error(404, "NOT_FOUND", "Evaluation was not found", event)
     table, _, _ = _clients()
     requirements = [item["payload"] for item in table.query(KeyConditionExpression="pk = :pk AND begins_with(sk, :prefix)", ExpressionAttributeValues={":pk": f"EVAL#{evaluation_id}", ":prefix": "REQ#"}).get("Items", [])]
-    results = [item["payload"] for item in table.query(KeyConditionExpression="pk = :pk AND begins_with(sk, :prefix)", ExpressionAttributeValues={":pk": f"EVAL#{evaluation_id}", ":prefix": "RES#"}).get("Items", [])]
+    result_items = table.query(KeyConditionExpression="pk = :pk AND begins_with(sk, :prefix)", ExpressionAttributeValues={":pk": f"EVAL#{evaluation_id}", ":prefix": "RES#"}).get("Items", [])
+    results = [item["payload"] for item in result_items]
+    specialists = {item["payload"]["evaluation_result_id"]: item.get("specialist") for item in result_items}
     reviews = _latest_reviews(table, evaluation_id)
     vendor_ids = sorted({result["vendor_id"] for result in results})
     vendors = [{"vendor_id": value, "display_name": value} for value in vendor_ids]
@@ -419,7 +430,7 @@ def _matrix(event: dict[str, Any], evaluation_id: str) -> dict[str, Any]:
                     "final_state": review.get("final_state") if review else None,
                     "final_score": review.get("final_score") if review else None,
                     "review_status": ("CONFIRMED" if review and review.get("action") in {"ACCEPT", "OVERRIDE"} else "FOLLOWUP_REQUESTED" if review else "PENDING"),
-                    "specialist": result.get("specialist"),
+                    "specialist": specialists.get(result["evaluation_result_id"]),
                     "has_conflict": bool(result.get("conflict_pairs")),
                 })
         rows.append({"requirement": {key: requirement.get(key) for key in ("requirement_id", "requirement_code", "title", "category", "mandatory", "is_disqualifying", "weight")}, "results": cells})
@@ -454,7 +465,7 @@ def _review(event: dict[str, Any], evaluation_id: str, result_id: str) -> dict[s
         review = HumanReview(human_review_id=f"REV_{uuid4().hex[:16]}", evaluation_result_id=result_id, action=action, system_state=EvaluationState(item["payload"]["state"]), system_score=item["payload"].get("suggested_score"), final_state=body.get("final_state"), final_score=body.get("final_score"), rationale=body.get("rationale"), reviewer_sub=_owner(event) or "unknown", reviewed_at=datetime.now(timezone.utc))
     except ValueError as exc:
         return _error(400, "VALIDATION_ERROR", str(exc), event)
-    table.put_item(Item={"pk": f"EVAL#{evaluation_id}", "sk": f"REV#{result_id}#{review.human_review_id}", "payload": review.model_dump(mode="json"), "created_at": _now(), "owner_sub": _owner(event)})
+    table.put_item(Item={"pk": f"EVAL#{evaluation_id}", "sk": f"REV#{result_id}#{review.human_review_id}", "payload": ddb_safe(review.model_dump(mode="json")), "created_at": _now(), "owner_sub": _owner(event)})
     table.put_item(Item=_audit_item(evaluation_id, "HUMAN_REVIEW_RECORDED", _owner(event) or "unknown", {"evaluation_result_id": result_id, "action": review.action.value, "system_state": review.system_state.value, "final_state": review.final_state.value if review.final_state else None}))
     return _success(review.model_dump(mode="json"), event, 201)
 

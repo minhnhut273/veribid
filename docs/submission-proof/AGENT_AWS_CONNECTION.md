@@ -1,6 +1,7 @@
 # Agent-to-AWS Connection Proof
 
-Status: PARTIAL — foundation evidence captured; refresh and final acceptance pending
+Status: CURRENT — authenticated deployment and production vertical-slice
+acceptance captured
 
 This artifact contains only executed, non-secret evidence.
 
@@ -9,22 +10,27 @@ This artifact contains only executed, non-secret evidence.
 - Coding agent: Codex desktop, repository `D:\DOWNLOAD\01_Workspace\VeriBid`.
 - Region/profile used: `us-east-1` / `my-aws`.
 - AWS CLI version check: AWS CLI 2.36.30 was present.
-- Foundation operations previously completed: CDK bootstrap, `VeriBidStack`
-  deployment, Amplify manual deployment job 3, and public API/UI checks.
+- Foundation operations completed: CDK bootstrap, `VeriBidStack` deployment in
+  `us-east-1`, Amplify manual deployment job 4, and public API/UI checks.
 - Public checks executed again on 2026-09-23:
   - `GET https://jzmjnr4tq4.execute-api.us-east-1.amazonaws.com/api/v1/health`
     returned HTTP 200 and `status=ok`.
   - `GET https://jzmjnr4tq4.execute-api.us-east-1.amazonaws.com/api/v1/demo`
     returned HTTP 200 with three vendors and a seeded conflict.
   - `GET https://main.d2jw7e2fbiu6od.amplifyapp.com/` returned HTTP 200.
+- The deployed Vite asset returned HTTP 200 with `text/javascript` and the
+  production browser rendered the landing page and read-only matrix.
+- Authenticated production proof used a synthetic Cognito account and
+  evaluation `EVL_f98cc9cc335d4ccd`; the workflow reached `READY_FOR_REVIEW`,
+  recorded ACCEPT and rationale-backed OVERRIDE reviews, and generated READY
+  Markdown/PDF exports. The synthetic identity and evaluation artifacts were
+  deleted and verified absent after proof.
 - GitHub Actions verified commit `2c0f751` and `f9ebe86` successfully; the
   current Amplify rewrite fix is pushed as `cab2e21` ancestry with `7ef8252`.
 
-## Current blocker
+## Remaining release risk
 
-`aws sts get-caller-identity --profile my-aws --region us-east-1` now returns
-`Your session has expired. Please reauthenticate using 'aws login'.` No secret,
-token or session value is recorded here. After the owner confirms and completes
-`aws login --profile my-aws`, verify caller identity and CloudFormation before
-redeploying; then capture authenticated workspace/upload/evaluation/review/
-export proof and a real Bedrock cache benchmark.
+The current caller identity is the account root identity. No secret, token or
+session value is recorded here. Replace it with a least-privilege deployment
+identity before a non-hackathon release. Bedrock model availability and prompt
+cache read telemetry still require a controlled account-specific benchmark.

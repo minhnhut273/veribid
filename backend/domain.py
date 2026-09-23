@@ -7,10 +7,22 @@ domain/API data. Provider-specific payloads must be converted here first.
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from decimal import Decimal
 from enum import StrEnum
 from typing import Any, Callable, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
+
+
+def ddb_safe(value: Any) -> Any:
+    """Convert JSON-shaped model data to values accepted by DynamoDB's serializer."""
+    if isinstance(value, float):
+        return Decimal(str(value))
+    if isinstance(value, dict):
+        return {key: ddb_safe(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [ddb_safe(item) for item in value]
+    return value
 
 
 class EvaluationState(StrEnum):

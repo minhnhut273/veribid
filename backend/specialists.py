@@ -4,7 +4,10 @@ from __future__ import annotations
 
 from enum import StrEnum
 
-from .domain import Requirement, RequirementCategory
+try:  # Lambda loads modules from the asset root.
+    from .domain import Requirement, RequirementCategory
+except ImportError:  # Local package tests and top-level Lambda handler.
+    from domain import Requirement, RequirementCategory  # type: ignore
 
 
 class Specialist(StrEnum):

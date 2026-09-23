@@ -13,13 +13,13 @@ from uuid import uuid4
 
 try:
     from .deterministic import insufficient_evidence, numeric_threshold_check, tco_limit_check
-    from .domain import EvaluationState, Requirement, RequirementCategory, EvaluationType
+    from .domain import EvaluationState, Requirement, RequirementCategory, EvaluationType, ddb_safe
     from .ingestion import parse_document
     from .specialists import route_requirement
     from .verifier import new_conflict_pair, verify_candidate
 except ImportError:  # Lambda handler modules are loaded from the asset root.
     from deterministic import insufficient_evidence, numeric_threshold_check, tco_limit_check  # type: ignore
-    from domain import EvaluationState, Requirement, RequirementCategory, EvaluationType  # type: ignore
+    from domain import EvaluationState, Requirement, RequirementCategory, EvaluationType, ddb_safe  # type: ignore
     from ingestion import parse_document  # type: ignore
     from specialists import route_requirement  # type: ignore
     from verifier import new_conflict_pair, verify_candidate  # type: ignore
@@ -99,6 +99,11 @@ def _ingest(event: dict[str, Any]) -> dict[str, Any]:
 def _extract_requirements(event: dict[str, Any]) -> dict[str, Any]:
     table, _ = _clients()
     evaluation_id = event["evaluation_id"]
+    existing_requirements = _query(table, evaluation_id, "REQ#")
+    if existing_requirements:
+        table.update_item(Key={"pk": f"EVAL#{evaluation_id}", "sk": "META"}, UpdateExpression="SET #status = :status, requirement_count = :count", ExpressionAttributeNames={"#status": "status"}, ExpressionAttributeValues={":status": "READY_FOR_EVALUATION", ":count": len(existing_requirements)})
+        table.update_item(Key={"pk": f"EVAL#{evaluation_id}", "sk": f"JOB#{event['job_id']}"}, UpdateExpression="SET #status = :status, updated_at = :at", ExpressionAttributeNames={"#status": "status"}, ExpressionAttributeValues={":status": "COMPLETED", ":at": _now()})
+        return {"job_id": event.get("job_id"), "status": "COMPLETED", "requirement_count": len(existing_requirements), "idempotent": True}
     chunks = _query(table, evaluation_id, "CHK#")
     buyer_chunks = [item["payload"] for item in chunks if item["payload"].get("vendor_id") is None]
     requirements: list[Requirement] = []
@@ -126,7 +131,7 @@ def _extract_requirements(event: dict[str, Any]) -> dict[str, Any]:
         raise ValueError("no atomic buyer requirements could be extracted")
     with table.batch_writer() as batch:
         for requirement in requirements:
-            batch.put_item(Item={"pk": f"EVAL#{evaluation_id}", "sk": f"REQ#{requirement.requirement_id}", "payload": requirement.model_dump(mode="json")})
+            batch.put_item(Item={"pk": f"EVAL#{evaluation_id}", "sk": f"REQ#{requirement.requirement_id}", "payload": ddb_safe(requirement.model_dump(mode="json"))})
     table.update_item(Key={"pk": f"EVAL#{evaluation_id}", "sk": "META"}, UpdateExpression="SET #status = :status, requirement_count = :count", ExpressionAttributeNames={"#status": "status"}, ExpressionAttributeValues={":status": "READY_FOR_EVALUATION", ":count": len(requirements)})
     table.update_item(Key={"pk": f"EVAL#{evaluation_id}", "sk": f"JOB#{event['job_id']}"}, UpdateExpression="SET #status = :status, updated_at = :at", ExpressionAttributeNames={"#status": "status"}, ExpressionAttributeValues={":status": "COMPLETED", ":at": _now()})
     return {"job_id": event.get("job_id"), "status": "COMPLETED", "requirement_count": len(requirements)}
@@ -168,7 +173,7 @@ def _evaluate(event: dict[str, Any]) -> dict[str, Any]:
                 if "processed in the us" in lower or "processed in us" in lower or "united states" in lower:
                     us_chunk = next(chunk for chunk in scoped_chunks if re.search(r"\b(?:us|u\.s\.|united states)\b", chunk.get("text", ""), re.IGNORECASE))
                     claims.append({"claim_text": "The proposal references processing in the United States.", "relation": "contradicts", "confidence": 0.9, "source_pointer": us_chunk["source_pointer"]})
-                try:
+                try:  # Keep the worker valid both as a package and as Lambda's top-level module.
                     from .domain import EvidenceClaim
                 except ImportError:
                     from domain import EvidenceClaim  # type: ignore
@@ -195,7 +200,7 @@ def _evaluate(event: dict[str, Any]) -> dict[str, Any]:
                             telemetry_totals[key] += value
                 result = verify_candidate(evaluation_result_id=f"EVAL_{uuid4().hex[:16]}", requirement_id=requirement.requirement_id, vendor_id=vendor_id, proposal_id=proposal_id, suggested_state=suggested_state, suggested_score=suggested_score, max_score=10, rationale=rationale, claims=evidence_claims, conflict_pairs=conflict_pairs, deterministic_result=deterministic)
                 result_id = result.evaluation_result_id
-                batch.put_item(Item={"pk": f"EVAL#{evaluation_id}", "sk": f"RES#{result_id}", "run_id": run_id, "specialist": specialist_route.value, "payload": result.model_dump(mode="json")})
+                batch.put_item(Item={"pk": f"EVAL#{evaluation_id}", "sk": f"RES#{result_id}", "run_id": run_id, "specialist": specialist_route.value, "payload": ddb_safe(result.model_dump(mode="json"))})
                 result_count += 1
     telemetry = {**telemetry_totals, "cache_read_input_tokens": telemetry_totals["cache_read_input_tokens"] or None, "cache_write_input_tokens": telemetry_totals["cache_write_input_tokens"] or None}
     table.put_item(Item={"pk": f"EVAL#{evaluation_id}", "sk": f"RUN#{run_id}", "run_id": run_id, "status": "COMPLETED", "progress": {"total_items": result_count, "completed_items": result_count, "failed_items": 0}, "telemetry": telemetry, "updated_at": _now()})

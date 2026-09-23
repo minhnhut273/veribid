@@ -129,6 +129,7 @@ def test_human_review_is_append_only_and_matrix_exposes_final_decision(monkeypat
     assert cell["final_state"] == "PARTIALLY_SATISFIED"
     assert cell["final_score"] == 6.0
     assert cell["review_status"] == "CONFIRMED"
+    assert cell["specialist"] == "TECHNICAL_SPECIALIST"
     assert any(item["sk"].startswith("AUD#") for item in table.items.values())
 
 
