@@ -71,3 +71,12 @@ as p50, p95, a production-wide hit rate or guaranteed cost savings.
 Current format boundary: text-based DOCX, text-layer PDF and XLSX
 workbook/sheet/row evidence are supported. Scanned or image-heavy PDF and
 Textract are outside the current MVP.
+
+## Builder Center submission boundary
+
+The correct signed-in Builder Center account contains a VeriBid project in
+`DRAFT` state, but the draft fields are currently blank: title,
+description/content, category tag, lane tag, live URL and repository URL. The
+repository content above is the reviewed submission source, not a claim that
+those fields have already been entered or published. Originality/not-
+previously-published status requires user confirmation before publishing.

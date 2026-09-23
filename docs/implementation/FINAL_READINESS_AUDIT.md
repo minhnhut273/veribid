@@ -2,7 +2,12 @@
 
 **Audit date:** 2026-09-23 (Asia/Bangkok)  
 **Scope:** current worktree, authoritative Phase 1 specifications, existing completion report, read-only live AWS verification, public browser verification, and low-risk in-contract P1 UI/documentation corrections.  
-**Recommendation:** **CONDITIONAL GO** for a controlled hackathon MVP demonstration; **not yet a clean submission GO** because the authenticated end-to-end flow was not freshly replayed in this audit, the 01–19 proof pack is not present as separate evidence artifacts, the deployment caller is the AWS root identity, and the cache benchmark does not support p50/p95 claims.
+**Recommendation:** **CONDITIONAL GO** for a controlled hackathon MVP demonstration. Technical ship gates and the numbered proof inventory are current; the Builder Center project is a `DRAFT` but its required submission fields are blank, so it is not yet ready to publish.
+
+Sections 1–15 retain the original audit and historical evidence for provenance.
+Where their pre-remediation status differs from the live closure, Sections 17
+and 18 are authoritative. Historical failures are not current release
+blockers unless repeated by the closure checks.
 
 ## 1. Executive status
 
@@ -10,7 +15,12 @@ The deployed product is a real AWS-backed VeriBid MVP, not a localhost-only mock
 
 The repository also contains the core evidence contracts: five canonical states, SourcePointer-bearing claims, vendor/proposal scope checks, conflict pairs, bounded one-repair validation, HumanReview semantics, AuditEvent, deterministic results, Markdown/PDF export code, and parser paths for DOCX, text PDF, and XLSX.
 
-The remaining readiness risk is proof and release hygiene, not a request for new architecture. A browser verification reached the live public demo and the Cognito sign-in surface, but no authenticated credentials were supplied for a fresh destructive-capable workflow replay. The existing authenticated synthetic run is documented in `docs/submission-proof/` and the completion report, but its source data was cleaned up and it is not a current screenshot/video artifact. The Builder Center tab was inspected read-only and showed the account profile, not a project publication status, so submission status is **UNKNOWN**.
+The remaining readiness risk is submission-draft completion, not product
+architecture or technical ship gates. The fresh authenticated synthetic run,
+current UI/export trace and non-root deployment are recorded in the numbered
+proof inventory. The correct Builder Center profile was inspected read-only;
+project `3JWkr3zsJiWsbELhE83C5NLCQmB` exists as a `DRAFT`, but its title,
+description, content, tags, live URL and repository URL are blank.
 
 ### Decision
 
@@ -19,25 +29,25 @@ The remaining readiness risk is proof and release hygiene, not a request for new
 | Live public MVP exists | PASS | Live Amplify page, `/demo`, `/api/v1/health`, protected API probe |
 | Core implementation contracts | IMPLEMENTED / PARTIAL | `backend/domain.py`, `backend/ingestion.py`, `backend/api.py`, frontend DTOs and flow |
 | Latest deployed evaluation | PASS | Step Functions `RUN_8ce16b2e2dcd4ff9` = `SUCCEEDED`, 9 results |
-| Fresh authenticated UI replay | NOT PROVEN in this audit | Cognito form reached; no credentials supplied; prior synthetic proof is documented, not freshly recaptured |
-| Proof pack 01–19 | PARTIAL | five combined proof documents exist; canonical numbered artifacts do not |
-| Security release posture | CONDITIONAL | runtime role is scoped; deployment caller is confirmed AWS root |
-| Submission readiness | CONDITIONAL GO | demo can proceed with controlled claims; publish only after listed P0/P1 evidence actions |
+| Fresh authenticated UI replay | PASS | `EVL_4f323aba9796446f` and `RUN_d35820c4850d472f` are recorded in current proof files |
+| Proof pack 01–19 | READY with boundaries | all numbered files exist; 01–18 are classified and 19 is the current Builder draft record |
+| Security release posture | PASS | deployment used non-root `veribid-deploy`; historical root usage is labeled historical |
+| Submission readiness | CONDITIONAL GO | Builder project exists as DRAFT but required fields are blank; no Publish action was taken |
 
 ## 2. P0 / P1 / P2 gap table
 
 | Priority | Gap | Classification | Exact action |
 |---|---|---|---|
-| P0 | Builder Center project publication/submission status is not observable from the inspected account tab | UNKNOWN / eligibility gate | Open the actual project record in the correct Builder Center account and capture a redacted status proof. Do not publish automatically. |
-| P0 | No separate canonical 01–19 artifact pack | MISSING proof, not necessarily product behavior | Capture only real, redacted evidence for each required artifact; do not fabricate screenshots. |
-| P1 | Deployment was made with AWS root identity | SECURITY release risk | Stop normal deployment work with this profile. Plan a least-privilege deployment identity migration; do not rotate/delete/disable credentials without an impact map and explicit authorization. |
-| P1 | Authenticated eight-step UI flow was not freshly replayed | NEEDS_RECAPTURE | Run one controlled authenticated evaluation with the approved synthetic fixture, record each UI checkpoint, then clean only the test data if authorized. |
-| P1 | Before this audit, conflict detail showed only a count; the UI did not show both sides or an explicit suggestion/final-decision trace | FIXED LOCALLY, NOT DEPLOYED | Local low-risk patch adds both claim sides and decision trace in `frontend/src/App.tsx`; deploy and recapture artifact 07/09/12 only under an approved non-root identity. |
-| P1 | Export renderer summarizes conflict preservation but does not visibly render both claim sides in the export | PARTIAL | Extend export traceability to include both referenced claims and their SourcePointers, then test Markdown and PDF. This was not deployed in this audit because it crosses the backend release boundary. |
+| P0 | Builder Center project exists as DRAFT but required submission fields are blank | CONDITIONAL submission gate | Populate title, description/content, `#commercial-potential`, `#startup`, live URL, repository URL and originality/development content, then re-check before the user manually publishes. |
+| P0 | No separate canonical 01–19 artifact pack | CLOSED | All numbered files exist and are classified; no screenshot is claimed where text/live evidence is sufficient. |
+| P1 | Deployment was made with AWS root identity | HISTORICAL / CLOSED for current path | Current deployment uses non-root `veribid-deploy`; do not rotate/delete/disable root credentials as part of this closure. |
+| P1 | Authenticated eight-step UI flow was not freshly replayed | CLOSED | Fresh evaluation `EVL_4f323aba9796446f` and Step Functions run `RUN_d35820c4850d472f` are recorded. |
+| P1 | Conflict UI and explicit system-vs-human trace | CLOSED | Deployed UI showed both Vendor A evidence sides and preserved the original suggestion after override. |
+| P1 | Export renderer did not visibly render both claim sides | CLOSED with boundary | READY Markdown/PDF export records were inspected; Markdown contained both sides and source trace. No browser-local downloaded file was captured. |
 | P1 | Prompt-cache benchmark has one cold/warm pair only | PARTIAL evidence | Report measured values without p50/p95. If the submission requires p50/p95, run a new approved benchmark with a documented sample size and provider telemetry. |
 | P1 | Scanned PDF / Textract fallback is not implemented or deployed | NOT IMPLEMENTED / documented explicitly | Keep outside the current MVP claim. Use text PDF, DOCX, and XLSX only in the demo; the architecture diagram now labels OCR as not deployed. |
-| P1 | Submission draft lacks an explicit original/not-previously-published statement | DOCUMENTATION MISSING | Add the required statement to the submission draft before publishing, after confirming the platform's exact wording. |
-| P1 | `docs/submission/DEVELOPMENT_STORY.md` contains stale “remaining work” language about live acceptance/current-model verification | DOCUMENTATION DRIFT | Refresh the development story or annotate it with the current evidence IDs and current limitations. |
+| P1 | Original/not-previously-published claim is not independently verified | USER CONFIRMATION REQUIRED | Confirm this statement before publishing; do not add it as a fact without confirmation. |
+| P1 | `docs/submission/DEVELOPMENT_STORY.md` contains stale “remaining work” language | CLOSED | Development story now names the current deployment, E2E IDs and Docker/CI boundary. |
 | P2 | AgentCore, OpenSearch Serverless/vector DB, ERP integrations, marketplace features, extra agents | DEFERRED BY CONTRACT | Do not implement for this submission. |
 
 ## 3. FR-1 through FR-7 implementation matrix
@@ -47,25 +57,25 @@ The authoritative owner for this matrix is `Document/Phase_1/VeriBid_Functional_
 | Requirement | Judgment | Current evidence | Remaining boundary |
 |---|---|---|---|
 | FR-1 RFP/rubric ingestion, versioning, stable prefix/cache point | IMPLEMENTED / PARTIAL | `backend/ingestion.py`, `backend/api.py`, `backend/worker.py`; upload init/complete routes; worker has `PROMPT_CACHE_ENABLED=true`; cache benchmark records provider cache-write/read telemetry | Current parser supports text PDF/DOCX/XLSX; scanned PDF fallback absent. Benchmark lacks p50/p95. |
-| FR-2 three-vendor ingestion and isolation | IMPLEMENTED | `backend/api.py` scoped upload DTOs; `backend/domain.py::ensure_vendor_scope`; `backend/ingestion.py::test_parser_rejects_partial_vendor_scope`; prior synthetic run used Vendor A/B/C | Fresh UI upload of all three vendors was not replayed in this audit. |
-| FR-3 typed requirements, categories, weights, disqualifying flag, SourcePointer | IMPLEMENTED in code / TEST EXECUTION UNAVAILABLE | `Requirement` in `backend/domain.py`; `is_disqualifying` appears in API DTOs; DOCX/XLSX pointer tests exist | Local environment lacks `pytest`, so current test execution could not reproduce the historical 22-test pass. |
-| FR-4 routing, specialist evidence, deterministic calculations | IMPLEMENTED / PARTIAL | `backend/specialists.py`, `backend/deterministic.py`, `backend/worker.py`; deterministic availability/TCO/weighted-score paths; latest live run recorded 2 Bedrock invocations | Fresh per-invariant acceptance run was not executed because runtime dependencies are unavailable locally and no new AWS data run was authorized. |
-| FR-5 Skeptical Verifier, conflict pairs, abstention, five states | IMPLEMENTED in code / live result evidence exists | `EvaluationState` has exactly five values; `EvidenceClaim`, `ConflictPair`, `validate_with_one_repair`; prior/live synthetic result reports conflict and insufficient cells | Current public `/demo` proves the controlled visual fixture; authenticated detail replay and proof artifact are missing. |
-| FR-6 evidence matrix, click-through detail, review semantics | PARTIAL | `frontend/src/App.tsx` matrix click opens `ResultPanel`; API returns claims/conflicts/review; backend `HumanReview` enforces rationale for OVERRIDE and preserves suggestion | Local patch now renders both conflict sides and system-vs-human trace, but it is not deployed. Audit history is returned but not clearly rendered as a full history timeline. |
-| FR-7 defensible Markdown/PDF export and no autonomous award | IMPLEMENTED / PARTIAL | `api.py` export routes and renderer; frontend offers Markdown/PDF download; export includes claims and conflict preservation language | Export should include both sides of each conflict explicitly, not only a count/status summary. No fresh downloaded artifacts were captured in this audit. |
+| FR-2 three-vendor ingestion and isolation | IMPLEMENTED / PROVEN | `EVL_4f323aba9796446f` uploaded Vendor A/B/C with scoped proposal IDs and completed the matrix. | No screenshot is claimed; persisted/live UI observations are recorded. |
+| FR-3 typed requirements, categories, weights, disqualifying flag, SourcePointer | IMPLEMENTED / TESTED | `Requirement` and API DTOs include the contract fields; current backend suite passed `23 tests`. | SourcePointer locator precision remains format-specific as documented. |
+| FR-4 routing, specialist evidence, deterministic calculations | IMPLEMENTED / PROVEN | Fresh Vendor B detail showed `numeric_threshold_check · SATISFIED`; the live run completed through Step Functions. | No autonomous award is claimed. |
+| FR-5 Skeptical Verifier, conflict pairs, abstention, five states | IMPLEMENTED / PROVEN | Fresh Vendor A conflict and Vendor C `INSUFFICIENT_EVIDENCE` were observed; canonical five states remain unchanged. | No screenshot is claimed. |
+| FR-6 evidence matrix, click-through detail, review semantics | IMPLEMENTED / PROVEN | Fresh matrix/detail flow showed both conflict sides, ACCEPT, blocked empty-rationale OVERRIDE and successful rationale-backed OVERRIDE. | UI does not render a full audit timeline; persisted audit events are the trace authority. |
+| FR-7 defensible Markdown/PDF export and no autonomous award | IMPLEMENTED / PROVEN WITH BOUNDARY | READY Markdown/PDF records were produced; Markdown contained both conflict sides, claims and SourcePointers. | No browser-local downloaded artifact was captured; this is not a P0 unless officially required. |
 
 ## 4. Eight-step UI flow matrix
 
 | Step | Status | Evidence / limitation |
 |---|---|---|
-| 1. Create Evaluation | UI_SUPPORTED by code | `AuthenticatedWorkspace` calls `api.createEvaluation`; protected workspace is wrapped by Amplify `Authenticator`. Fresh authenticated replay not performed. |
-| 2. Upload RFP + Rubric | UI_SUPPORTED by code | File picker, role selector, presigned PUT, complete-upload call, refresh. Fresh replay not performed. |
-| 3. Upload Vendor A/B/C proposals | UI_SUPPORTED by code / NEEDS_RECAPTURE | Vendor/proposal fields and scoped upload route exist. No current authenticated screenshot proves all three uploads. |
-| 4. Extract Requirements | UI_SUPPORTED by code | `api.extractRequirements` and processing status path exist. |
-| 5. Run Evaluation | UI_SUPPORTED by code / live backend proven | `api.startRun` and polling exist; live Step Functions run succeeded. |
-| 6. Evidence Matrix | UI_SUPPORTED / live public fixture proven | Public `/demo` shows 3 requirements × 3 vendors and canonical states. Authenticated matrix load is documented but not freshly replayed. |
-| 7. Human Review | PARTIAL / code supported | ACCEPT, OVERRIDE, REQUEST_FOLLOWUP controls exist; rationale is required for OVERRIDE in UI and backend. Local patch now makes suggestion/final distinction explicit. Full live acceptance proof needs recapture. |
-| 8. Export | UI_SUPPORTED by code / NEEDS_RECAPTURE | Markdown/PDF buttons and download path exist. Fresh export file and explicit both-side conflict trace remain unproven. |
+| 1. Create Evaluation | PROVEN | Fresh authenticated evaluation `EVL_4f323aba9796446f`. |
+| 2. Upload RFP + Rubric | PROVEN | Synthetic RFP and rubric uploaded in the fresh replay. |
+| 3. Upload Vendor A/B/C proposals | PROVEN | Three synthetic, scoped vendor proposals uploaded. |
+| 4. Extract Requirements | PROVEN | Three typed requirements extracted. |
+| 5. Run Evaluation | PROVEN | Step Functions run `RUN_d35820c4850d472f` completed. |
+| 6. Evidence Matrix | PROVEN | Fresh 3 × 3 matrix and cell details observed. |
+| 7. Human Review | PROVEN | ACCEPT, empty-rationale block and rationale-backed OVERRIDE verified. |
+| 8. Export | PROVEN WITH BOUNDARY | Markdown/PDF records READY and Markdown inspected; no browser-local downloaded file captured. |
 
 ### UI invariant coverage
 
@@ -74,12 +84,12 @@ The authoritative owner for this matrix is `Document/Phase_1/VeriBid_Functional_
 | `/app` authenticated workspace | Code + Cognito sign-in surface observed |
 | Protected API rejects anonymous access | Live `GET /api/v1/evaluations/does-not-exist` returned HTTP 401 with Bearer challenge |
 | SourcePointer visible/resolvable | API result DTO and source claim rendering exist; prior contract tests cover DOCX/XLSX pointers |
-| Both sides of `CONFLICTING_EVIDENCE` | Local patch implemented; deployment and screenshot still required |
+| Both sides of `CONFLICTING_EVIDENCE` | Fresh Vendor A detail and export trace show both sides; no screenshot is claimed |
 | `INSUFFICIENT_EVIDENCE` visible | Public `/demo` and `StateBadge` path show it |
-| Deterministic result distinguishable from AI rationale | `ResultPanel` has deterministic authority block; live authenticated screenshot missing |
-| ACCEPT / OVERRIDE / rationale | Backend contract and UI controls exist; live proof missing |
-| Original suggestion survives override | `HumanReview` contract stores system state/score; UI now labels system suggestion separately; live proof missing |
-| Audit history visible/demonstrable | API returns `audit_events`; current UI only shows latest review, not a full audit timeline |
+| Deterministic result distinguishable from AI rationale | Fresh Vendor B detail showed `numeric_threshold_check · SATISFIED` |
+| ACCEPT / OVERRIDE / rationale | Fresh UI replay verified all three behaviors |
+| Original suggestion survives override | Fresh UI retained the original `CONFLICTING EVIDENCE · 10 / 10` suggestion |
+| Audit history visible/demonstrable | Fresh DynamoDB record set contained separate review records and four `AUD#` events; UI shows latest decision rather than a full timeline |
 
 ## 5. Functional and evidence invariants
 
@@ -121,7 +131,7 @@ Read-only checks were executed with AWS CLI profile `my-aws` in `us-east-1`. No 
 
 Historical CloudWatch logs also contain earlier import and Bedrock IAM failures, including `AccessDeniedException` for `bedrock:InvokeModel`. The later `RUN_8ce16b2e2dcd4ff9` success proves the deployed path was subsequently fixed; it does not justify claiming that all historical executions were clean.
 
-## 7. Test and verification results
+## 7. Historical test and verification results
 
 | Command / check | Result | Interpretation |
 |---|---|---|
@@ -169,7 +179,7 @@ SourcePointer limitations that must remain visible in submission language: PDF u
 
 The only safe submission wording is that one measured cold/warm provider-telemetry pair demonstrated cache write/read behavior. The data does not support a general latency percentile, cost saving, or production-wide cache-hit-rate claim.
 
-## 10. Security and root-identity status
+## 10. Historical root-identity status
 
 The live read-only identity check returned an ARN ending in `:root`. This confirms the completion report's security warning. The deployment/runtime role itself is materially narrower: Bedrock invocation is scoped to the configured inference profile/foundation resources, DynamoDB access is table-scoped, S3 access is evaluation-prefix scoped, and CloudWatch permissions are limited to the `VeriBid` namespace. That runtime least-privilege evidence does not make root deployment acceptable.
 
@@ -198,7 +208,7 @@ No credential change, root rotation, deletion, or migration was performed in thi
 
 The corrected system diagram has not been committed or deployed as part of this audit. It remains a dirty-worktree artifact for review, as requested by the pasted audit plan.
 
-## 12. Submission-proof inventory 01–19
+## 12. Pre-closure submission-proof inventory 01–19 (superseded by Section 18)
 
 The canonical inventory is taken verbatim from the audit plan. `READY` means a current artifact exists and proves the named claim; a code path or a document that merely says a thing happened is not enough.
 
@@ -226,11 +236,11 @@ The canonical inventory is taken verbatim from the audit plan. `READY` means a c
 
 All future screenshots/video must exclude access keys, secret keys, session tokens, JWTs, Cognito secrets, complete presigned URLs, unnecessary account IDs, and confidential proposal contents.
 
-## 13. Builder Center readiness
+## 13. Pre-closure Builder Center readiness (superseded by Section 18)
 
 **Status: UNKNOWN.** The inspected Chrome profile showed the signed-in Builder Center account and general navigation (Badges, Posts, Wishlist, and related tabs), but no VeriBid project record or publication status. No publish/submit action was taken. This is a P0 proof/eligibility gate until the exact project record is located and its status is captured.
 
-## 14. Submission draft and demo readiness
+## 14. Pre-closure submission draft and demo readiness (superseded by Section 18)
 
 The current submission draft contains the project problem, target user, commercial procurement value, `#commercial-potential`, `#startup`, public URLs, architecture, dual Bedrock/deterministic path, evidence-grounding and human-authority claims, and a narrow cache-telemetry claim. `DEVELOPMENT_STORY.md` supplies the development-process narrative and coding-agent/AWS connection examples.
 
@@ -249,7 +259,7 @@ Before publishing, update the draft to explicitly state that the application is 
 | 2:35–2:50 | Markdown/PDF | Use a real downloaded artifact; verify both-side conflict trace before claiming full traceability. |
 | 2:50–3:00 | Cache + architecture | Show the single measured provider-telemetry pair and state that p50/p95 were not measured. |
 
-## 15. Exact remaining actions
+## 15. Pre-closure remaining actions (superseded by Section 18)
 
 1. **Do not deploy with the root profile.** Obtain authorization for the least-privilege migration plan and perform the identity change only after impact mapping.
 2. Deploy the already-reviewed low-risk frontend patch under the approved deployment identity, then rerun TypeScript/build and capture the conflict/decision UI.
@@ -269,7 +279,7 @@ Before publishing, update the draft to explicitly state that the application is 
 **Security issue:** AWS CLI identity is the account root; do not continue normal deployment or rotate credentials without an authorized least-privilege migration plan.  
 **Final readiness:** **CONDITIONAL GO** for a controlled, evidence-bounded MVP demo; **NO clean final submission GO yet** until the P0/P1 actions and proof recapture are complete.
 
-## 16. Post-remediation verification addendum 2026-09-23
+## 16. Historical post-remediation verification addendum (superseded)
 
 This addendum supersedes stale action wording above where it describes the
 state before the final clean-go remediation. It does not promote unavailable
@@ -338,18 +348,77 @@ pre-remediation statuses in sections 1–16 where they conflict.
 | Human Review | PASS | ACCEPT succeeded; empty-rationale OVERRIDE remained disabled; rationale-backed OVERRIDE succeeded and retained the system suggestion. |
 | Audit history | PASS | Fresh evaluation had separate review records and four `AUD#` audit events in DynamoDB. |
 | Export trace | PASS with boundary | Markdown/PDF export records were READY; Markdown contained both conflict sides and source trace. Browser download event was not exposed, so no local downloaded file is claimed. |
-| Builder Center submission status | UNKNOWN | Read-only profile/badges page did not expose the exact VeriBid project record. No publish or submit action was taken. |
+| Builder Center submission status | DRAFT | Correct signed-in profile showed project `3JWkr3zsJiWsbELhE83C5NLCQmB`; preview exposed `Đăng`, while required draft fields were blank. No publish or submit action was taken. |
 
 ### Current proof inventory
 
 Proof files `01_live_app.md` through `18_submission_tags.md` now record the
 current observation or its explicit boundary. `19_builder_submission.md`
-remains `UNKNOWN`. This is a text evidence pack; it intentionally does not
-fabricate screenshots or downloaded files.
+records the signed-in project as `DRAFT` and its blank required fields. This
+is a text evidence pack; it intentionally does not fabricate screenshots or
+downloaded files.
 
 ### Final readiness
 
-**CONDITIONAL GO.** This is not **CLEAN GO** because a P0 submission gate —
-the exact Builder Center project status — remains unknown. Local direct CDK
-synth is also not runnable while Docker Desktop's Linux engine is unavailable,
-although the CI assembly and deployed CloudFormation update passed.
+**CONDITIONAL GO.** The technical ship gates are proven, but the Builder
+Center draft is incomplete. Local direct CDK synth is also not runnable while
+Docker Desktop's Linux engine is unavailable, although the CI assembly and
+deployed CloudFormation update passed.
+
+## 18. Final submission closure 2026-09-23
+
+### Proof inventory classification
+
+| # | Artifact | Classification | Boundary / purpose |
+|---:|---|---|---|
+| 01 | `live_app` | READY_WITH_BOUNDARY | Public app and `/demo` reachable; no screenshot claimed. |
+| 02 | `amplify_deploy` | READY | Amplify job 6 succeeded. |
+| 03 | `aws_resources` | READY | Stack and stateful resource inventory verified. |
+| 04 | `agent_connected` | READY | Agent-to-AWS connection recorded. |
+| 05 | `agent_aws_action` | READY | Non-root inspection/deployment action recorded. |
+| 06 | `agent_delivery` | READY_WITH_BOUNDARY | CI assembly and deployment delivered; local Docker synth remains unavailable. |
+| 07 | `evidence_matrix` | READY_WITH_BOUNDARY | Fresh 3 × 3 matrix observed; no screenshot claimed. |
+| 08 | `source_grounding` | READY_WITH_BOUNDARY | Fresh SourcePointer detail recorded; no screenshot claimed. |
+| 09 | `contradiction` | READY_WITH_BOUNDARY | Both Vendor A conflict sides and pointers recorded. |
+| 10 | `abstention` | READY_WITH_BOUNDARY | Vendor C explicit `INSUFFICIENT_EVIDENCE` recorded. |
+| 11 | `deterministic_tool` | READY_WITH_BOUNDARY | Vendor B deterministic threshold result recorded. |
+| 12 | `human_review` | READY_WITH_BOUNDARY | ACCEPT, blocked empty-rationale OVERRIDE and successful rationale-backed OVERRIDE recorded. |
+| 13 | `audit_trace` | READY_WITH_BOUNDARY | Fresh review records and four audit events recorded. |
+| 14 | `export` | READY_WITH_BOUNDARY | Markdown/PDF records READY; Markdown inspected with both conflict sides; no browser-local file captured. |
+| 15 | `prompt_cache` | READY_WITH_BOUNDARY | One measured cold/warm provider telemetry pair only. |
+| 16 | `cloudwatch` | READY_WITH_BOUNDARY | Historical live telemetry; no fresh closure query claimed. |
+| 17 | `architecture_diagram` | READY_WITH_BOUNDARY | Repository diagrams match deployed architecture; no screenshot/PNG claimed. |
+| 18 | `submission_tags` | READY_WITH_BOUNDARY | Draft documentation contains required tags; originality remains user-confirmation dependent. |
+| 19 | `builder_submission` | READY_WITH_BOUNDARY | Correct signed-in account exposes an existing `DRAFT`; required fields are blank. |
+
+No item is `MISSING`. No screenshot is required by the observed hackathon
+requirements merely because an internal checklist once suggested one.
+
+### Submission-contract check
+
+The repository submission draft covers coding-agent-to-AWS connection, live
+AWS app and URL, `#commercial-potential`, `#startup`, development process,
+concrete agent contribution, architecture, accurate Bedrock usage,
+deterministic calculations, Human Review authority, measured prompt-cache
+boundary, and format limitations. It makes no p50/p95, production-wide cache
+savings or scanned-PDF/Textract support claim.
+
+The Builder Center draft itself is not yet populated. The following remain
+unverified or absent in the Builder draft: originality confirmation, title,
+description/content, category tag, lane tag, live URL and repository URL.
+
+### Exact user action required
+
+Populate the Builder Center draft with the reviewed submission content and
+links, add `#commercial-potential` and `#startup`, confirm the app is original
+and was not previously published, then review the final preview. The user
+must perform the final `Đăng` / Publish action manually. Codex did not publish
+or submit anything.
+
+### Closure decision
+
+**CONDITIONAL GO** — technical release gates are proven and the project exists
+in the correct account as `DRAFT`, but it is not “otherwise complete”; the
+submission fields are blank. After the user fills and reviews the draft, the
+appropriate next state is `READY TO PUBLISH — USER ACTION REQUIRED`, not an
+automatic publish.

@@ -3,9 +3,9 @@
 **Ngày báo cáo:** 2026-09-23  
 **Phạm vi:** Repository setup, AWS deployment, public demo, authenticated production vertical slice và release proof  
 **Trạng thái:** CONDITIONAL GO sau final clean-go remediation; current
-deployment và fresh authenticated synthetic replay đã PASS, nhưng Builder
-Center project status và browser-captured downloaded export files chưa được
-xác minh.
+deployment và fresh authenticated synthetic replay đã PASS. Builder Center
+project tồn tại đúng account dưới dạng DRAFT nhưng các trường submission còn
+trống; browser-captured downloaded export files chưa được ghi nhận.
 
 ## 1. Tóm tắt kết quả
 
@@ -256,8 +256,14 @@ sections above:
   record was READY. The in-app browser did not expose a local download event,
   so no downloaded-file artifact is claimed.
 
-Readiness remains **CONDITIONAL GO**. Builder Center was inspected read-only,
-but the exact VeriBid project record and DRAFT/PUBLISHED status were not
-visible; no publish or hackathon submission was performed. The canonical
-proof files now record current evidence or an explicit boundary, and the
-remaining UNKNOWN item is `19_builder_submission.md`.
+Readiness remains **CONDITIONAL GO**. The correct signed-in Builder Center
+profile showed project `3JWkr3zsJiWsbELhE83C5NLCQmB` as a DRAFT with a Publish
+button, but title, content, tags, live URL and repository URL were blank. No
+publish or hackathon submission was performed. The canonical proof files now
+record current evidence or an explicit boundary; `19_builder_submission.md`
+records the DRAFT and its incomplete fields.
+
+The exact user action required is to populate and review the Builder Center
+draft, confirm originality/not-previously-published, add `#commercial-potential`
+and `#startup`, attach the live/repository links, and manually publish if the
+user chooses to do so. Codex must not click Publish automatically.

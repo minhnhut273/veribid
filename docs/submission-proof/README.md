@@ -7,7 +7,9 @@ Expected proof artifacts include the public URL, AWS-agent connection evidence, 
 Proof status is tracked in `ACCEPTANCE_RESULTS.md` after each test is actually executed.
 
 The final clean-go remediation inventory is recorded in `01_live_app.md`
-through `19_builder_submission.md`. Each file states its evidence status and
-keeps historical, local-only, unavailable and current live observations
-separate. `UNKNOWN` means the underlying account/project state was not
-observable; it is not a pass claim.
+through `19_builder_submission.md`. Each file states one of `READY`,
+`READY_WITH_BOUNDARY`, `MISSING` or `UNKNOWN`, and keeps hackathon-required
+proof, judging/demo evidence and internal QA evidence separate. A proof item
+does not require a screenshot unless the competition explicitly requires one.
+`UNKNOWN` means the underlying account/project state was not observable; it is
+not a pass claim.
