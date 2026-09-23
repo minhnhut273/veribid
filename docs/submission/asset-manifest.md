@@ -18,3 +18,7 @@ presigned URLs, account identifiers, and confidential vendor material.
 No blocked asset is represented as a completed screenshot in the article. The
 two SVGs are safe explanatory visuals and are clearly classified as
 `DESIGN-INTENT` in the claim register.
+
+The rendered PNG diagrams are committed and publicly reachable from the
+repository. Builder preview image rendering remains unverified until the
+platform's native image upload or a visible image node is confirmed.

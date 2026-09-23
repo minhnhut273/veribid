@@ -18,13 +18,17 @@ Inspection and draft population performed 2026-09-23 in the correct Chrome profi
   product summary.
 - Content: populated in Markdown mode with the reviewed storytelling article,
   architecture, development episodes, narrow cache claim, commercial path,
-  MVP boundaries, live/demo/repository links and tags.
+  MVP boundaries, live/demo/repository links, tags, and links to the two
+  repository-hosted explanatory PNG diagrams.
 - Tags selected in Builder: `commercial-potential`, `startups`, `ai`,
   `serverless`, `amazon-bedrock-agents`.
 - Live demo URL: `https://main.d2jw7e2fbiu6od.amplifyapp.com/demo`.
 - Repository URL: `https://github.com/minhnhut273/veribid`.
 - Cover and inline product screenshots: not uploaded; the current repository
   package records those assets as blocked until real redacted captures exist.
+- Inline diagram rendering: the preview visibly rendered the article
+  hierarchy, text, links and tags; image rendering is not counted as verified
+  because no image node was exposed in the preview accessibility state.
 - Preview URL: `https://builder.aws.com/project/3JWkr3zsJiWsbELhE83C5NLCQmB/veribid-evidence-driven-bid-evaluation-engine-for-auditable-rfp-decisions`.
 
 The preview visibly rendered the title, headings, narrative, links and tags.
