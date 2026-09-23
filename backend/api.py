@@ -10,6 +10,7 @@ from __future__ import annotations
 import base64
 import json
 import os
+import textwrap
 from decimal import Decimal
 from pathlib import PurePath
 from datetime import datetime, timedelta, timezone
@@ -81,22 +82,36 @@ def _audit_item(evaluation_id: str, event_type: str, actor_sub: str, payload: di
 
 def _pdf_bytes(text: str) -> bytes:
     """Build a tiny dependency-free PDF for the bounded MVP export path."""
-    lines = text.splitlines()[:48]
-    commands = ["BT", "/F1 10 Tf", "48 760 Td"]
-    for index, line in enumerate(lines):
-        escaped = line.replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)")[:115]
-        if index:
-            commands.append("0 -14 Td")
-        commands.append(f"({escaped}) Tj")
-    commands.append("ET")
-    stream = "\n".join(commands).encode("latin-1", errors="replace")
+    wrapped_lines = [
+        wrapped or " "
+        for line in text.splitlines()
+        for wrapped in (textwrap.wrap(line, width=110, replace_whitespace=False) or [""])
+    ] or [" "]
+    page_lines = 48
+    pages = [wrapped_lines[index:index + page_lines] for index in range(0, len(wrapped_lines), page_lines)]
+    page_object_numbers = [5 + index * 2 for index in range(len(pages))]
     objects = [
         b"<< /Type /Catalog /Pages 2 0 R >>",
-        b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
-        b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>",
+        b"",
+        b"",
         b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
-        b"<< /Length " + str(len(stream)).encode() + b" >>\nstream\n" + stream + b"\nendstream",
     ]
+    for page_number, page in zip(page_object_numbers, pages):
+        commands = ["BT", "/F1 10 Tf", "48 760 Td"]
+        for index, line in enumerate(page):
+            escaped = line.replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)")
+            if index:
+                commands.append("0 -14 Td")
+            commands.append(f"({escaped}) Tj")
+        commands.append("ET")
+        stream = "\n".join(commands).encode("latin-1", errors="replace")
+        content_object_number = page_number + 1
+        objects.extend([
+            f"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R >> >> /Contents {content_object_number} 0 R >>".encode(),
+            b"<< /Length " + str(len(stream)).encode() + b" >>\nstream\n" + stream + b"\nendstream",
+        ])
+    kids = " ".join(f"{number} 0 R" for number in page_object_numbers)
+    objects[1] = f"<< /Type /Pages /Kids [{kids}] /Count {len(pages)} >>".encode()
     output = bytearray(b"%PDF-1.4\n")
     offsets = [0]
     for number, obj in enumerate(objects, start=1):
@@ -111,6 +126,46 @@ def _pdf_bytes(text: str) -> bytes:
         output.extend(f"{offset:010d} 00000 n \n".encode())
     output.extend(f"trailer\n<< /Size {len(objects) + 1} /Root 1 0 R >>\nstartxref\n{xref}\n%%EOF\n".encode())
     return bytes(output)
+
+
+def _single_line(value: Any, fallback: str = "unavailable") -> str:
+    text_value = str(value or fallback)
+    return " ".join(text_value.split())
+
+
+def _source_locator(pointer: dict[str, Any]) -> str:
+    locator_parts: list[str] = []
+    if pointer.get("page_number"):
+        locator_parts.append(f"page {pointer['page_number']}")
+    if pointer.get("section"):
+        locator_parts.append(f"section {pointer['section']}")
+    if pointer.get("line_start"):
+        line_end = pointer.get("line_end") or pointer["line_start"]
+        locator_parts.append(f"lines {pointer['line_start']}-{line_end}")
+    if pointer.get("sheet_name"):
+        locator_parts.append(f"sheet {pointer['sheet_name']}")
+    if pointer.get("row_start"):
+        row_end = pointer.get("row_end") or pointer["row_start"]
+        locator_parts.append(f"rows {pointer['row_start']}-{row_end}")
+    if pointer.get("chunk_id"):
+        locator_parts.append(f"chunk {pointer['chunk_id']}")
+    return "; ".join(locator_parts) or "locator unavailable"
+
+
+def _claim_trace_lines(label: str, claim: dict[str, Any] | None) -> list[str]:
+    if not claim:
+        return [f"  - {label} evidence: claim not found in the persisted result"]
+    pointer = claim.get("source_pointer") or {}
+    excerpt = claim.get("evidence_excerpt") or claim.get("claim_text")
+    return [
+        f"  - {label} evidence:",
+        f"    - EvidenceClaim ID: {_single_line(claim.get('evidence_claim_id'))}",
+        f"    - Claim / evidence excerpt: {_single_line(excerpt)}",
+        f"    - Document: {_single_line(pointer.get('document_name'))} ({_single_line(pointer.get('document_type'))})",
+        f"    - SourcePointer ID: {_single_line(pointer.get('source_pointer_id'))}",
+        f"    - Source locator: {_source_locator(pointer)}",
+        f"    - Content hash: {_single_line(pointer.get('content_hash'))}",
+    ]
 
 
 def _render_export(table: Any, evaluation_id: str) -> str:
@@ -131,6 +186,7 @@ def _render_export(table: Any, evaluation_id: str) -> str:
     for result in results:
         requirement = by_requirement.get(result.get("requirement_id"), {})
         review = reviews.get(result.get("evaluation_result_id"))
+        claims_by_id = {claim.get("evidence_claim_id"): claim for claim in result.get("evidence_claims", [])}
         state = (review or {}).get("final_state") or result.get("state")
         score = (review or {}).get("final_score") if review else None
         if score is None:
@@ -138,12 +194,22 @@ def _render_export(table: Any, evaluation_id: str) -> str:
         lines.append(f"- {requirement.get('requirement_code', result.get('requirement_id'))} / {result.get('vendor_id')}: {state} ({score if score is not None else 'n/a'})")
         for claim in result.get("evidence_claims", []):
             pointer = claim.get("source_pointer", {})
-            locator = pointer.get("page_number") or pointer.get("sheet_name") or pointer.get("section") or pointer.get("chunk_id") or "unresolved"
-            lines.append(f"  - {claim.get('relation')}: {claim.get('claim_text')} [{pointer.get('document_name', 'document')} @ {locator}]")
-        if result.get("conflict_pairs"):
-            lines.append("  - conflict_pairs: preserved and unresolved")
+            lines.append(f"  - EvidenceClaim {claim.get('evidence_claim_id', 'unassigned')} ({claim.get('relation')}): {_single_line(claim.get('evidence_excerpt') or claim.get('claim_text'))}")
+            lines.append(f"    - Document: {_single_line(pointer.get('document_name'))} ({_single_line(pointer.get('document_type'))})")
+            lines.append(f"    - SourcePointer {pointer.get('source_pointer_id', 'unassigned')} @ {_source_locator(pointer)}")
+        for index, pair in enumerate(result.get("conflict_pairs", []), start=1):
+            lines.extend([
+                "  - Conflict pair " + str(index) + ":",
+                f"    - conflict_type: {_single_line(pair.get('conflict_type'))}",
+                f"    - resolution_status: {_single_line(pair.get('resolution_status'))}",
+            ])
+            lines.extend(_claim_trace_lines("Supporting", claims_by_id.get(pair.get("supporting_claim_id"))))
+            lines.extend(_claim_trace_lines("Contradicting", claims_by_id.get(pair.get("contradicting_claim_id"))))
+            lines.append(f"    - Verifier rationale: {_single_line(result.get('verifier_rationale') or result.get('rationale'))}")
         if review:
             lines.append(f"  - human_review: {review.get('action')} by {review.get('reviewer_sub')}")
+            if review.get("rationale"):
+                lines.append(f"    - rationale: {_single_line(review.get('rationale'))}")
     return "\n".join(lines) + "\n"
 
 

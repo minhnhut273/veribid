@@ -147,3 +147,30 @@ def test_export_contains_evidence_trace_and_pdf_payload(monkeypatch):
     assert fetched["statusCode"] == 200
     assert payload["status"] == "READY"
     assert payload["content_base64"].startswith("JVBERi0xLjQ")
+
+
+def test_export_renders_both_conflict_sides_and_source_trace(monkeypatch):
+    table, s3, sfn = FakeTable(), FakeS3(), FakeStepFunctions()
+    evaluation_id = "EVL_CONFLICT"
+    table.put_item(Item={"pk": f"EVAL#{evaluation_id}", "sk": "META", "owner_sub": "user-1", "evaluation_id": evaluation_id, "name": "RFP", "status": "READY_FOR_EXPORT", "created_at": "now"})
+    table.put_item(Item={"pk": f"EVAL#{evaluation_id}", "sk": "REQ#REQ_1", "payload": {"requirement_id": "REQ_1", "requirement_code": "SEC-01"}})
+    table.put_item(Item={"pk": f"EVAL#{evaluation_id}", "sk": "RES#RES_1", "payload": {
+        "evaluation_result_id": "RES_1", "requirement_id": "REQ_1", "vendor_id": "VEN_A", "proposal_id": "PROP_A",
+        "state": "CONFLICTING_EVIDENCE", "suggested_score": 4, "max_score": 10,
+        "rationale": "The verifier preserved two incompatible residency claims.",
+        "evidence_claims": [
+            {"evidence_claim_id": "EVC_SUPPORT", "relation": "supports", "claim_text": "Data stays in the EU.", "source_pointer": {"source_pointer_id": "PTR_SUPPORT", "document_id": "DOC_A", "document_name": "VendorA_Proposal.pdf", "document_type": "PDF", "page_number": 17, "section": "Residency", "resolvable": True}},
+            {"evidence_claim_id": "EVC_CONTRADICT", "relation": "contradicts", "claim_text": "Telemetry may be processed in the US.", "source_pointer": {"source_pointer_id": "PTR_CONTRADICT", "document_id": "DOC_B", "document_name": "VendorA_Security.pdf", "document_type": "PDF", "page_number": 12, "section": "Processing", "resolvable": True}},
+        ],
+        "conflict_pairs": [{"supporting_claim_id": "EVC_SUPPORT", "contradicting_claim_id": "EVC_CONTRADICT", "conflict_type": "DATA_RESIDENCY", "resolution_status": "UNRESOLVED"}],
+    }})
+    monkeypatch.setattr(api, "_clients", lambda: (table, s3, sfn))
+    started = api.handler(event(f"/api/v1/evaluations/{evaluation_id}/exports", "POST", {"format": "MARKDOWN"}, {"evaluation_id": evaluation_id}), None)
+    export_id = json.loads(started["body"])["data"]["export_id"]
+    payload = json.loads(api.handler(event(f"/api/v1/evaluations/{evaluation_id}/exports/{export_id}", "GET", params={"evaluation_id": evaluation_id, "export_id": export_id}), None)["body"])["data"]
+    content = payload["content"]
+    assert "Supporting evidence" in content
+    assert "EVC_SUPPORT" in content and "PTR_SUPPORT" in content and "VendorA_Proposal.pdf" in content
+    assert "Contradicting evidence" in content
+    assert "EVC_CONTRADICT" in content and "PTR_CONTRADICT" in content and "VendorA_Security.pdf" in content
+    assert "DATA_RESIDENCY" in content and "UNRESOLVED" in content
