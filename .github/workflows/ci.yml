@@ -40,7 +40,11 @@ jobs:
         run: |
           npm ci
           npm run build
-          npm run synth
+          npm run synth -- \
+            --context bedrockModelId=arn:aws:bedrock:us-east-1:522346104596:inference-profile/global.anthropic.claude-sonnet-4-5-20250929-v1:0 \
+            --context bedrockModelArn=arn:aws:bedrock:us-east-1:522346104596:inference-profile/global.anthropic.claude-sonnet-4-5-20250929-v1:0 \
+            --context bedrockModelArns=arn:aws:bedrock:us-east-1::foundation-model/anthropic.claude-sonnet-4-5-20250929-v1:0,arn:aws:bedrock:us-east-2::foundation-model/anthropic.claude-sonnet-4-5-20250929-v1:0,arn:aws:bedrock:us-west-2::foundation-model/anthropic.claude-sonnet-4-5-20250929-v1:0 \
+            --context promptCacheEnabled=true
       - name: Package CDK cloud assembly for approved deployment handoff
         working-directory: infra
         run: tar -czf cdk-cloud-assembly.tar.gz cdk.out
