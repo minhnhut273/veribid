@@ -84,7 +84,7 @@ TCO, formulas, totals, and weighted calculations. The Skeptical Verifier
 preserves contradictions, rejects unsupported claims, and fails closed on
 schema/execution errors rather than relabeling them as missing evidence.
 
-![Dual-path evaluation](assets/dual_path.svg)
+![Dual-path evaluation](assets/dual_path.png)
 
 ## Skeptical Verifier
 
@@ -105,7 +105,7 @@ Functions, S3, DynamoDB, Bedrock, and CloudWatch. The workflow is asynchronous:
 4. persist verified results;
 5. review and export a defensible report.
 
-![AWS architecture](assets/aws_architecture.svg)
+![AWS architecture](assets/aws_architecture.png)
 
 AgentCore, a dedicated vector database, and deployed Textract are not claimed
 as part of this MVP.

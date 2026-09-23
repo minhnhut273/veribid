@@ -15,6 +15,10 @@ VeriBid is an evidence-driven bid evaluation engine for procurement and sourcing
 `assets/cover.png` — **BLOCKED until a real redacted Evidence Matrix screenshot
 is captured. Do not upload a fabricated mock screenshot.**
 
+Inline explanatory diagrams are ready as `assets/dual_path.png` and
+`assets/aws_architecture.png`; they are diagrams, not product or AWS Console
+screenshots.
+
 ## Links
 
 - Live app: https://main.d2jw7e2fbiu6od.amplifyapp.com/
