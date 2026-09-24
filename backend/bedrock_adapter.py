@@ -112,7 +112,11 @@ def _strip_json_fence(text: str) -> str:
         match = re.search(r"(\{[\s\S]*\}|\[[\s\S]*\])", cleaned)
         if match:
             cleaned = match.group(1).strip()
-    cleaned = re.sub(r",\s*([\}\]])", r"\1", cleaned)
+    cleaned = re.sub(
+        r'"(?:\\.|[^"\\])*"|,\s*([\}\]])',
+        lambda match: match.group(0) if match.group(1) is None else match.group(1),
+        cleaned,
+    )
     json.loads(cleaned)  # fail early with a standard parsing error
     return cleaned
 

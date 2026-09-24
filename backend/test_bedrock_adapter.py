@@ -1,7 +1,9 @@
+import json
+
 from pydantic import BaseModel
 import pytest
 
-from backend.bedrock_adapter import BedrockAdapter
+from backend.bedrock_adapter import BedrockAdapter, _strip_json_fence
 from backend.domain import SchemaExecutionFailure
 
 
@@ -39,3 +41,14 @@ def test_structured_output_allows_one_repair_then_fails_closed():
     failing = FakeBedrock([response("bad"), response("still bad")])
     with pytest.raises(SchemaExecutionFailure):
         BedrockAdapter("verified-model-id", failing).converse_json(system_prompt="", user_prompt="Evaluate", output_model=Output, repair=lambda text: "Repair")
+
+
+def test_json_cleanup_preserves_trailing_comma_like_text_inside_strings():
+    raw = r'{"state":"SATISFIED","note":"literal ,} and ,] plus \"quoted\" text","items":[1,2,],}'
+    cleaned = json.loads(_strip_json_fence(raw))
+
+    assert cleaned == {
+        "state": "SATISFIED",
+        "note": 'literal ,} and ,] plus "quoted" text',
+        "items": [1, 2],
+    }
