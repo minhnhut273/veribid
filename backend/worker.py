@@ -77,6 +77,11 @@ def _query(table: Any, evaluation_id: str, prefix: str) -> list[dict[str, Any]]:
     return table.query(KeyConditionExpression="pk = :pk AND begins_with(sk, :prefix)", ExpressionAttributeValues={":pk": f"EVAL#{evaluation_id}", ":prefix": prefix}).get("Items", [])
 
 
+def _workspace_field(event: dict[str, Any]) -> dict[str, str]:
+    workspace_id = event.get("workspace_id")
+    return {"workspace_id": str(workspace_id)} if workspace_id else {}
+
+
 def _ingest(event: dict[str, Any]) -> dict[str, Any]:
     table, s3 = _clients()
     evaluation_id, document_id = event["evaluation_id"], event["document_id"]
@@ -90,7 +95,7 @@ def _ingest(event: dict[str, Any]) -> dict[str, Any]:
         chunks = parse_document(path, document_id, document["media_type"], document.get("vendor_id"), document.get("proposal_id"))
         with table.batch_writer() as batch:
             for chunk in chunks:
-                batch.put_item(Item={"pk": f"EVAL#{evaluation_id}", "sk": f"CHK#{chunk.chunk_id}", "document_id": document_id, "payload": chunk.model_dump(mode="json"), "vendor_id": chunk.vendor_id, "proposal_id": chunk.proposal_id})
+                batch.put_item(Item={"pk": f"EVAL#{evaluation_id}", "sk": f"CHK#{chunk.chunk_id}", "document_id": document_id, "payload": chunk.model_dump(mode="json"), "vendor_id": chunk.vendor_id, "proposal_id": chunk.proposal_id, **_workspace_field(event)})
     table.update_item(Key=key, UpdateExpression="SET ingestion_status = :status, chunk_count = :count, processed_at = :at", ExpressionAttributeValues={":status": "READY", ":count": len(chunks), ":at": _now()})
     table.update_item(Key={"pk": f"EVAL#{evaluation_id}", "sk": f"JOB#{event['job_id']}"}, UpdateExpression="SET #status = :status, updated_at = :at", ExpressionAttributeNames={"#status": "status"}, ExpressionAttributeValues={":status": "COMPLETED", ":at": _now()})
     return {"job_id": event.get("job_id"), "status": "COMPLETED", "document_id": document_id, "chunk_count": len(chunks)}
@@ -131,7 +136,7 @@ def _extract_requirements(event: dict[str, Any]) -> dict[str, Any]:
         raise ValueError("no atomic buyer requirements could be extracted")
     with table.batch_writer() as batch:
         for requirement in requirements:
-            batch.put_item(Item={"pk": f"EVAL#{evaluation_id}", "sk": f"REQ#{requirement.requirement_id}", "payload": ddb_safe(requirement.model_dump(mode="json"))})
+            batch.put_item(Item={"pk": f"EVAL#{evaluation_id}", "sk": f"REQ#{requirement.requirement_id}", "payload": ddb_safe(requirement.model_dump(mode="json")), **_workspace_field(event)})
     table.update_item(Key={"pk": f"EVAL#{evaluation_id}", "sk": "META"}, UpdateExpression="SET #status = :status, requirement_count = :count", ExpressionAttributeNames={"#status": "status"}, ExpressionAttributeValues={":status": "READY_FOR_EVALUATION", ":count": len(requirements)})
     table.update_item(Key={"pk": f"EVAL#{evaluation_id}", "sk": f"JOB#{event['job_id']}"}, UpdateExpression="SET #status = :status, updated_at = :at", ExpressionAttributeNames={"#status": "status"}, ExpressionAttributeValues={":status": "COMPLETED", ":at": _now()})
     return {"job_id": event.get("job_id"), "status": "COMPLETED", "requirement_count": len(requirements)}
@@ -183,10 +188,13 @@ def _evaluate(event: dict[str, Any]) -> dict[str, Any]:
                     numbers = [float(value.replace(",", "")) for value in re.findall(r"(?:\$|USD\s*)([\d,]+)", texts, re.IGNORECASE)]
                     deterministic = tco_limit_check(annual_license=numbers[0], implementation_fee=numbers[1], support_per_year=numbers[2], contract_years=3, maximum_total=requirement.threshold or 500000) if len(numbers) >= 3 else insufficient_evidence("tco_limit_check", ["annual_license", "implementation_fee", "support_per_year"])
                 if "eu" in lower or "europe" in lower:
-                    claims.append({"claim_text": "The proposal references EU processing or hosting.", "relation": "supports", "confidence": 0.9, "source_pointer": next(chunk["source_pointer"] for chunk in scoped_chunks if "eu" in chunk.get("text", "").lower() or "europe" in chunk.get("text", "").lower())})
+                    eu_chunk = next((chunk for chunk in scoped_chunks if "eu" in chunk.get("text", "").lower() or "europe" in chunk.get("text", "").lower()), None)
+                    if eu_chunk:
+                        claims.append({"claim_text": "The proposal references EU processing or hosting.", "relation": "supports", "confidence": 0.9, "source_pointer": eu_chunk["source_pointer"]})
                 if "processed in the us" in lower or "processed in us" in lower or "united states" in lower:
-                    us_chunk = next(chunk for chunk in scoped_chunks if re.search(r"\b(?:us|u\.s\.|united states)\b", chunk.get("text", ""), re.IGNORECASE))
-                    claims.append({"claim_text": "The proposal references processing in the United States.", "relation": "contradicts", "confidence": 0.9, "source_pointer": us_chunk["source_pointer"]})
+                    us_chunk = next((chunk for chunk in scoped_chunks if re.search(r"\b(?:us|u\.s\.|united states)\b", chunk.get("text", ""), re.IGNORECASE)), None)
+                    if us_chunk:
+                        claims.append({"claim_text": "The proposal references processing in the United States.", "relation": "contradicts", "confidence": 0.9, "source_pointer": us_chunk["source_pointer"]})
                 try:  # Keep the worker valid both as a package and as Lambda's top-level module.
                     from .domain import EvidenceClaim
                 except ImportError:
@@ -214,10 +222,10 @@ def _evaluate(event: dict[str, Any]) -> dict[str, Any]:
                             telemetry_totals[key] += value
                 result = verify_candidate(evaluation_result_id=f"EVAL_{uuid4().hex[:16]}", requirement_id=requirement.requirement_id, vendor_id=vendor_id, proposal_id=proposal_id, suggested_state=suggested_state, suggested_score=suggested_score, max_score=10, rationale=rationale, claims=evidence_claims, conflict_pairs=conflict_pairs, deterministic_result=deterministic)
                 result_id = result.evaluation_result_id
-                batch.put_item(Item={"pk": f"EVAL#{evaluation_id}", "sk": f"RES#{result_id}", "run_id": run_id, "specialist": specialist_route.value, "payload": ddb_safe(result.model_dump(mode="json"))})
+                batch.put_item(Item={"pk": f"EVAL#{evaluation_id}", "sk": f"RES#{result_id}", "run_id": run_id, "specialist": specialist_route.value, "payload": ddb_safe(result.model_dump(mode="json")), **_workspace_field(event)})
                 result_count += 1
     telemetry = {**telemetry_totals, "cache_read_input_tokens": telemetry_totals["cache_read_input_tokens"] or None, "cache_write_input_tokens": telemetry_totals["cache_write_input_tokens"] or None}
-    table.put_item(Item={"pk": f"EVAL#{evaluation_id}", "sk": f"RUN#{run_id}", "run_id": run_id, "status": "COMPLETED", "progress": {"total_items": result_count, "completed_items": result_count, "failed_items": 0}, "telemetry": telemetry, "updated_at": _now()})
+    table.put_item(Item={"pk": f"EVAL#{evaluation_id}", "sk": f"RUN#{run_id}", "run_id": run_id, "status": "COMPLETED", "progress": {"total_items": result_count, "completed_items": result_count, "failed_items": 0}, "telemetry": telemetry, "updated_at": _now(), **_workspace_field(event)})
     table.update_item(Key={"pk": f"EVAL#{evaluation_id}", "sk": "META"}, UpdateExpression="SET #status = :status, updated_at = :at", ExpressionAttributeNames={"#status": "status"}, ExpressionAttributeValues={":status": "READY_FOR_REVIEW", ":at": _now()})
     table.update_item(Key={"pk": f"EVAL#{evaluation_id}", "sk": f"JOB#{run_id}"}, UpdateExpression="SET #status = :status, updated_at = :at", ExpressionAttributeNames={"#status": "status"}, ExpressionAttributeValues={":status": "COMPLETED", ":at": _now()})
     try:

@@ -63,6 +63,10 @@ export class VeriBidStack extends Stack {
       selfSignUpEnabled: true,
       signInAliases: { email: true },
       autoVerify: { email: true },
+      customAttributes: {
+        workspace_id: new cognito.StringAttribute({ mutable: false }),
+      },
+      featurePlan: cognito.FeaturePlan.ESSENTIALS,
       standardAttributes: { email: { required: true, mutable: true } },
       passwordPolicy: {
         minLength: 12,
@@ -73,6 +77,33 @@ export class VeriBidStack extends Stack {
       },
       removalPolicy: RemovalPolicy.RETAIN,
     });
+
+    const cognitoGroups = [
+      {
+        id: 'TenantAdminGroup',
+        name: 'TenantAdmin',
+        description: 'Full workspace administration and evaluation control',
+        precedence: 10,
+      },
+      {
+        id: 'SourcingLeadGroup',
+        name: 'SourcingLead',
+        description: 'Create, evaluate and review workspace bids',
+        precedence: 20,
+      },
+      {
+        id: 'AuditorGroup',
+        name: 'Auditor',
+        description: 'Read-only workspace evaluation and audit access',
+        precedence: 30,
+      },
+    ];
+    cognitoGroups.forEach((group) => new cognito.CfnUserPoolGroup(this, group.id, {
+      groupName: group.name,
+      description: group.description,
+      precedence: group.precedence,
+      userPoolId: userPool.userPoolId,
+    }));
 
     const userPoolClient = userPool.addClient('WebClient', {
       generateSecret: false,
@@ -88,6 +119,19 @@ export class VeriBidStack extends Stack {
         command: ['sh', '-c', 'pip install --no-cache-dir -r requirements.txt -t /asset-output && cp -r . /asset-output'],
       },
     });
+
+    const preTokenFunction = new lambda.Function(this, 'CognitoPreToken', {
+      runtime: lambda.Runtime.PYTHON_3_13,
+      handler: 'cognito_pre_token.handler',
+      code: backendCode,
+      timeout: Duration.seconds(10),
+      memorySize: 128,
+    });
+    userPool.addTrigger(
+      cognito.UserPoolOperation.PRE_TOKEN_GENERATION_CONFIG,
+      preTokenFunction,
+      cognito.LambdaVersion.V2_0,
+    );
 
     const workerFunction = new lambda.Function(this, 'WorkflowWorker', {
       runtime: lambda.Runtime.PYTHON_3_13,

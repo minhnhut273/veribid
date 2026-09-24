@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 from dataclasses import dataclass
 from typing import Any, Callable
 
@@ -103,9 +104,14 @@ class BedrockAdapter:
 
 def _strip_json_fence(text: str) -> str:
     cleaned = text.strip()
-    if cleaned.startswith("```"):
-        lines = cleaned.splitlines()
-        cleaned = "\n".join(lines[1:-1]) if len(lines) >= 3 else cleaned
+    if "```" in cleaned:
+        match = re.search(r"```(?:json)?\s*([\s\S]*?)\s*```", cleaned, re.IGNORECASE)
+        if match:
+            cleaned = match.group(1).strip()
+    if not (cleaned.startswith("{") or cleaned.startswith("[")):
+        match = re.search(r"(\{[\s\S]*\}|\[[\s\S]*\])", cleaned)
+        if match:
+            cleaned = match.group(1).strip()
     json.loads(cleaned)  # fail early with a standard parsing error
     return cleaned
 

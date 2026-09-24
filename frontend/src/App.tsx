@@ -1,6 +1,10 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Authenticator } from '@aws-amplify/ui-react';
+import { lazy, memo, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { api, DemoDto, DocumentDto, EvaluationDto, MatrixDto, RequirementDto, ResultDto, RunDto } from './api';
+
+const Authenticator = lazy(async () => {
+  const module = await import('@aws-amplify/ui-react');
+  return { default: module.Authenticator };
+});
 
 type Page = 'home' | 'demo' | 'app';
 
@@ -24,7 +28,12 @@ export function App() {
   }, []);
 
   useEffect(() => {
-    if (page === 'demo') api.demo().then(setDemo).catch(() => setError('Demo data is not reachable yet.'));
+    if (page !== 'demo') return;
+    let cancelled = false;
+    api.demo()
+      .then((response) => { if (!cancelled) setDemo(response); })
+      .catch(() => { if (!cancelled) setError('Demo data is not reachable yet.'); });
+    return () => { cancelled = true; };
   }, [page]);
 
   const navigate = (next: Page) => {
@@ -67,26 +76,29 @@ function Landing({ health, onDemo, onApp }: { health: { data: { status: string }
   </main>;
 }
 
-function Feature({ number, title, text }: { number: string; title: string; text: string }) {
+const Feature = memo(function Feature({ number, title, text }: { number: string; title: string; text: string }) {
   return <article className="feature"><span className="feature-number">{number}</span><h2>{title}</h2><p>{text}</p></article>;
-}
+});
 
 function Demo({ demo, onBack }: { demo: DemoDto | null; onBack: () => void }) {
+  const matrixByCell = useMemo(() => new Map((demo?.data.matrix ?? []).map((item) => [`${item.requirement_id}:${item.vendor_id}`, item])), [demo]);
   return <main className="content"><button className="back" onClick={onBack}>← Back to overview</button><div className="eyebrow">READ-ONLY PUBLIC DEMO</div><h1>{demo?.data.title ?? 'A transparent evaluation, end to end.'}</h1><p className="lede">Synthetic fixture data, intentionally read-only. Inspect the evidence-grounded matrix before signing in.</p>{demo ? <>
     <div className="stats"><div><strong>{demo.data.requirements.length}</strong><span>requirements</span></div><div><strong>{demo.data.vendors.length}</strong><span>vendors</span></div><div><strong>{demo.data.status}</strong><span>evaluation state</span></div></div>
-    <div className="matrix-card"><div className="card-heading"><span>Evidence matrix</span><small>System suggestion · read-only</small></div><table><thead><tr><th>Requirement</th>{demo.data.vendors.map((vendor) => <th key={vendor.vendor_id}>{vendor.name}</th>)}</tr></thead><tbody>{demo.data.requirements.map((req) => <tr key={req.id}><th><span>{req.category}</span>{req.text}</th>{demo.data.vendors.map((vendor) => { const cell = demo.data.matrix.find((item) => item.requirement_id === req.id && item.vendor_id === vendor.vendor_id); return <td key={vendor.vendor_id}><StateBadge state={cell?.state ?? 'INSUFFICIENT_EVIDENCE'} confidence={cell?.confidence ?? 0} /></td>; })}</tr>)}</tbody></table></div>
+    <div className="matrix-card"><div className="card-heading"><span>Evidence matrix</span><small>System suggestion · read-only</small></div><table><thead><tr><th>Requirement</th>{demo.data.vendors.map((vendor) => <th key={vendor.vendor_id}>{vendor.name}</th>)}</tr></thead><tbody>{demo.data.requirements.map((req) => <tr key={req.id}><th><span>{req.category}</span>{req.text}</th>{demo.data.vendors.map((vendor) => { const cell = matrixByCell.get(`${req.id}:${vendor.vendor_id}`); return <td key={vendor.vendor_id}><StateBadge state={cell?.state ?? 'INSUFFICIENT_EVIDENCE'} confidence={cell?.confidence ?? 0} /></td>; })}</tr>)}</tbody></table></div>
   </> : <div className="loading-card">Loading the public fixture…</div>}</main>;
 }
 
-function StateBadge({ state, confidence }: { state: string; confidence?: number }) {
+const StateBadge = memo(function StateBadge({ state, confidence }: { state: string; confidence?: number }) {
   const className = state === 'SATISFIED' ? 'satisfied' : state === 'CONFLICTING_EVIDENCE' ? 'conflict' : state === 'NOT_SATISFIED' ? 'not' : state === 'PARTIALLY_SATISFIED' ? 'partial' : 'insufficient';
   return <div className={`state ${className}`}><strong>{state.replaceAll('_', ' ')}</strong>{confidence !== undefined && <small>{Math.round(confidence * 100)}% confidence</small>}</div>;
-}
+});
 
 function Workspace({ onBack }: { onBack: () => void }) {
-  return <Authenticator loginMechanisms={['email']}>
-    {({ user, signOut }) => <AuthenticatedWorkspace userEmail={user?.signInDetails?.loginId ?? 'authenticated user'} onBack={onBack} onSignOut={signOut} />}
-  </Authenticator>;
+  return <Suspense fallback={<main className="content"><div className="loading-card">Loading secure workspace…</div></main>}>
+    <Authenticator loginMechanisms={['email']}>
+      {({ user, signOut }) => <AuthenticatedWorkspace userEmail={user?.signInDetails?.loginId ?? 'authenticated user'} onBack={onBack} onSignOut={signOut} />}
+    </Authenticator>
+  </Suspense>;
 }
 
 function AuthenticatedWorkspace({ userEmail, onBack, onSignOut }: { userEmail: string; onBack: () => void; onSignOut?: () => void }) {
@@ -103,6 +115,7 @@ function AuthenticatedWorkspace({ userEmail, onBack, onSignOut }: { userEmail: s
   const [uploadStatus, setUploadStatus] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const extractionRefreshTimer = useRef<number | null>(null);
 
   const refresh = async (evaluationId: string) => {
     const [evaluationResponse, documentResponse, requirementResponse] = await Promise.all([
@@ -113,8 +126,12 @@ function AuthenticatedWorkspace({ userEmail, onBack, onSignOut }: { userEmail: s
     setRequirements(requirementResponse.data);
     if (requirementResponse.data.length) {
       try { setMatrix((await api.matrix(evaluationId)).data); } catch { /* results may not exist yet */ }
-    }
+    } else setMatrix(null);
   };
+
+  useEffect(() => () => {
+    if (extractionRefreshTimer.current !== null) window.clearTimeout(extractionRefreshTimer.current);
+  }, []);
 
   const create = async () => {
     setError(null); setBusy('create');
@@ -128,7 +145,8 @@ function AuthenticatedWorkspace({ userEmail, onBack, onSignOut }: { userEmail: s
     const mediaType = file.type || (file.name.endsWith('.pdf') ? 'application/pdf' : file.name.endsWith('.docx') ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     setError(null); setUploadStatus('Preparing a verified upload…'); setBusy('upload');
     try {
-      const initialized = await api.initializeDocument(evaluation.evaluation_id, new File([file], file.name, { type: mediaType }), role, role.startsWith('VENDOR_') ? vendorId : undefined, role.startsWith('VENDOR_') ? proposalId : undefined);
+      const uploadFile = file.type === mediaType ? file : new File([file], file.name, { type: mediaType });
+      const initialized = await api.initializeDocument(evaluation.evaluation_id, uploadFile, role, role.startsWith('VENDOR_') ? vendorId : undefined, role.startsWith('VENDOR_') ? proposalId : undefined);
       const uploadResponse = await fetch(initialized.data.upload.url, { method: 'PUT', headers: initialized.data.upload.required_headers, body: file });
       if (!uploadResponse.ok) throw new Error(`S3 upload failed (${uploadResponse.status})`);
       const completed = await api.completeDocument(evaluation.evaluation_id, initialized.data.document_id);
@@ -141,7 +159,15 @@ function AuthenticatedWorkspace({ userEmail, onBack, onSignOut }: { userEmail: s
   const extract = async () => {
     if (!evaluation) return;
     setBusy('extract'); setError(null);
-    try { await api.extractRequirements(evaluation.evaluation_id); setUploadStatus('Requirement extraction queued. Refreshing shortly…'); window.setTimeout(() => void refresh(evaluation.evaluation_id), 2500); }
+    try {
+      await api.extractRequirements(evaluation.evaluation_id);
+      setUploadStatus('Requirement extraction queued. Refreshing shortly…');
+      if (extractionRefreshTimer.current !== null) window.clearTimeout(extractionRefreshTimer.current);
+      extractionRefreshTimer.current = window.setTimeout(() => {
+        extractionRefreshTimer.current = null;
+        void refresh(evaluation.evaluation_id);
+      }, 2500);
+    }
     catch (reason) { setError(reason instanceof Error ? reason.message : 'Could not extract requirements'); }
     finally { setBusy(null); }
   };
@@ -157,19 +183,32 @@ function AuthenticatedWorkspace({ userEmail, onBack, onSignOut }: { userEmail: s
   };
 
   useEffect(() => {
-    if (!evaluation || !run?.run_id || ['COMPLETED', 'FAILED', 'PARTIALLY_COMPLETED'].includes(run.status)) return;
-    const timer = window.setInterval(async () => {
+    const evaluationId = evaluation?.evaluation_id;
+    const runId = run?.run_id;
+    if (!evaluationId || !runId || ['COMPLETED', 'FAILED', 'PARTIALLY_COMPLETED'].includes(run.status)) return;
+    let cancelled = false;
+    let inFlight = false;
+    const poll = async () => {
+      if (cancelled || inFlight) return;
+      inFlight = true;
       try {
-        const next = (await api.getRun(evaluation.evaluation_id, run.run_id!)).data;
+        const next = (await api.getRun(evaluationId, runId)).data;
+        if (cancelled) return;
         setRun(next);
         if (['COMPLETED', 'FAILED', 'PARTIALLY_COMPLETED'].includes(next.status)) {
-          const matrixResponse = await api.matrix(evaluation.evaluation_id);
-          setMatrix(matrixResponse.data);
+          const matrixResponse = await api.matrix(evaluationId);
+          if (!cancelled) setMatrix(matrixResponse.data);
         }
-      } catch (reason) { setError(reason instanceof Error ? reason.message : 'Could not read evaluation progress'); }
-    }, 2000);
-    return () => window.clearInterval(timer);
-  }, [evaluation, run?.run_id, run?.status]);
+      } catch (reason) {
+        if (!cancelled) setError(reason instanceof Error ? reason.message : 'Could not read evaluation progress');
+      } finally {
+        inFlight = false;
+      }
+    };
+    void poll();
+    const timer = window.setInterval(() => void poll(), 2000);
+    return () => { cancelled = true; window.clearInterval(timer); };
+  }, [evaluation?.evaluation_id, run?.run_id, run?.status]);
 
   const openResult = async (resultId: string) => {
     if (!evaluation) return;
@@ -190,9 +229,14 @@ function AuthenticatedWorkspace({ userEmail, onBack, onSignOut }: { userEmail: s
     if (!evaluation) return;
     try {
       const started = await api.startExport(evaluation.evaluation_id, format);
-      const report = (await api.getExport(evaluation.evaluation_id, started.data.export_id)).data;
+      let report = (await api.getExport(evaluation.evaluation_id, started.data.export_id)).data;
+      for (let attempt = 0; attempt < 15 && !report.content && !report.content_base64; attempt += 1) {
+        await new Promise((resolve) => window.setTimeout(resolve, 1000));
+        report = (await api.getExport(evaluation.evaluation_id, started.data.export_id)).data;
+      }
+      if (!report.content && !report.content_base64) throw new Error('Export is still processing; please try again shortly.');
       const blob = format === 'PDF' && report.content_base64 ? new Blob([Uint8Array.from(atob(report.content_base64), (character) => character.charCodeAt(0))], { type: 'application/pdf' }) : new Blob([report.content ?? ''], { type: 'text/markdown' });
-      const url = URL.createObjectURL(blob); const link = document.createElement('a'); link.href = url; link.download = `veribid-${evaluation.evaluation_id.toLowerCase()}.${format === 'PDF' ? 'pdf' : 'md'}`; link.click(); URL.revokeObjectURL(url);
+      const url = URL.createObjectURL(blob); const link = document.createElement('a'); link.href = url; link.download = `veribid-${evaluation.evaluation_id.toLowerCase()}.${format === 'PDF' ? 'pdf' : 'md'}`; link.click(); window.setTimeout(() => URL.revokeObjectURL(url), 0);
     } catch (reason) { setError(reason instanceof Error ? reason.message : 'Could not generate export'); }
   };
 

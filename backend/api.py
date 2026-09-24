@@ -2,7 +2,7 @@
 
 The Lambda runtime keeps provider payloads behind this DTO boundary. Public
 routes are deliberately small; authenticated mutations are scoped by the
-Cognito subject and evaluation identifier before any persistence or S3 call.
+Cognito workspace claim and evaluation identifier before any persistence or S3 call.
 """
 
 from __future__ import annotations
@@ -33,6 +33,7 @@ EVALUATION_STATUSES = {
     "READY_FOR_EVALUATION", "EVALUATING", "READY_FOR_REVIEW", "REVIEWING",
     "READY_FOR_EXPORT", "COMPLETED", "FAILED",
 }
+WRITE_ROLES = {"TenantAdmin", "SourcingLead"}
 DOCUMENT_ROLES = {"BUYER_RFP", "BUYER_RUBRIC", "BUYER_POLICY", "VENDOR_PROPOSAL", "VENDOR_PRICING", "VENDOR_APPENDIX"}
 SUPPORTED_MEDIA_TYPES = {
     "application/pdf",
@@ -63,11 +64,12 @@ def _latest_reviews(table: Any, evaluation_id: str) -> dict[str, dict[str, Any]]
     return latest
 
 
-def _audit_item(evaluation_id: str, event_type: str, actor_sub: str, payload: dict[str, Any]) -> dict[str, Any]:
+def _audit_item(evaluation_id: str, event_type: str, actor_sub: str, workspace_id: str, payload: dict[str, Any]) -> dict[str, Any]:
     audit_id = f"AUD_{uuid4().hex[:16]}"
     return {
         "pk": f"EVAL#{evaluation_id}",
         "sk": f"AUD#{_now()}#{audit_id}",
+        "workspace_id": workspace_id,
         "payload": {
             "audit_event_id": audit_id,
             "aggregate_type": "EVALUATION",
@@ -268,6 +270,21 @@ def _owner(event: dict[str, Any]) -> str | None:
     return str(claims.get("sub")) if claims.get("sub") else None
 
 
+def _workspace_id(event: dict[str, Any]) -> str | None:
+    claims = _claims(event)
+    value = claims.get("workspace_id") or claims.get("custom:workspace_id")
+    return str(value).strip() if value and str(value).strip() else None
+
+
+def _groups(event: dict[str, Any]) -> set[str]:
+    value = _claims(event).get("cognito:groups", [])
+    if isinstance(value, str):
+        return {item.strip() for item in value.split(",") if item.strip()}
+    if isinstance(value, list):
+        return {str(item).strip() for item in value if str(item).strip()}
+    return set()
+
+
 def _clients() -> tuple[Any, Any, Any]:
     import boto3
     return (
@@ -281,21 +298,22 @@ def _key(evaluation_id: str) -> dict[str, str]:
     return {"pk": f"EVAL#{evaluation_id}", "sk": "META"}
 
 
-def _idempotency(key: str) -> dict[str, str]:
-    return {"pk": f"IDEMP#{key}", "sk": "COMMAND"}
+def _idempotency(key: str, workspace_id: str) -> dict[str, str]:
+    return {"pk": f"IDEMP#{workspace_id}#{key}", "sk": "COMMAND"}
 
 
 def _evaluation(event: dict[str, Any], evaluation_id: str) -> dict[str, Any] | None:
     table, _, _ = _clients()
     item = table.get_item(Key=_key(evaluation_id), ConsistentRead=True).get("Item")
-    if item and item.get("owner_sub") != _owner(event):
+    if item and item.get("workspace_id") != _workspace_id(event):
         return None
     return item
 
 
 def _create_evaluation(event: dict[str, Any]) -> dict[str, Any]:
     owner = _owner(event)
-    if not owner:
+    workspace_id = _workspace_id(event)
+    if not owner or not workspace_id:
         return _error(401, "UNAUTHENTICATED", "A valid Cognito access token is required", event)
     try:
         payload = _body(event)
@@ -307,15 +325,15 @@ def _create_evaluation(event: dict[str, Any]) -> dict[str, Any]:
     table, _, _ = _clients()
     idem = event.get("headers", {}).get("idempotency-key") or event.get("headers", {}).get("Idempotency-Key")
     if idem:
-        prior = table.get_item(Key=_idempotency(str(idem)), ConsistentRead=True).get("Item")
-        if prior and prior.get("owner_sub") == owner:
+        prior = table.get_item(Key=_idempotency(str(idem), workspace_id), ConsistentRead=True).get("Item")
+        if prior and prior.get("workspace_id") == workspace_id:
             return _success(prior["response"], event, int(prior.get("status", 201)))
     evaluation_id = f"EVL_{uuid4().hex[:16]}"
     created_at = _now()
-    data = {"evaluation_id": evaluation_id, "name": name.strip(), "status": "DRAFT", "created_at": created_at}
+    data = {"evaluation_id": evaluation_id, "name": name.strip(), "status": "DRAFT", "created_at": created_at, "workspace_id": workspace_id}
     table.put_item(Item={**_key(evaluation_id), **data, "owner_sub": owner})
     if idem:
-        table.put_item(Item={**_idempotency(str(idem)), "owner_sub": owner, "response": data, "status": 201, "created_at": created_at})
+        table.put_item(Item={**_idempotency(str(idem), workspace_id), "owner_sub": owner, "workspace_id": workspace_id, "response": data, "status": 201, "created_at": created_at})
     return _success(data, event, 201)
 
 
@@ -348,10 +366,11 @@ def _init_document(event: dict[str, Any], evaluation_id: str) -> dict[str, Any]:
         return _error(400, "VALIDATION_ERROR", "vendor_id and proposal_id must be supplied together", event, [{"field": "vendor_id/proposal_id", "reason": "PAIR_REQUIRED"}])
     table, s3, _ = _clients()
     owner = _owner(event)
+    workspace_id = _workspace_id(event)
     idem = event.get("headers", {}).get("idempotency-key") or event.get("headers", {}).get("Idempotency-Key")
     if idem:
-        prior = table.get_item(Key=_idempotency(str(idem)), ConsistentRead=True).get("Item")
-        if prior and prior.get("owner_sub") == owner:
+        prior = table.get_item(Key=_idempotency(str(idem), workspace_id or ""), ConsistentRead=True).get("Item")
+        if prior and prior.get("workspace_id") == workspace_id:
             return _success(prior["response"], event, int(prior.get("status", 201)))
     document_id = f"DOC_{uuid4().hex[:16]}"
     safe_file_name = PurePath(str(payload["file_name"])).name
@@ -359,12 +378,12 @@ def _init_document(event: dict[str, Any], evaluation_id: str) -> dict[str, Any]:
         return _error(400, "VALIDATION_ERROR", "file_name is invalid", event, [{"field": "file_name", "reason": "INVALID"}])
     object_key = f"evaluations/{evaluation_id}/documents/{document_id}/{safe_file_name}"
     expires_at = datetime.now(timezone.utc) + timedelta(minutes=15)
-    data = {"document_id": document_id, "evaluation_id": evaluation_id, "file_name": safe_file_name, "media_type": payload["media_type"], "document_role": role, "vendor_id": vendor_id, "proposal_id": proposal_id, "ingestion_status": "AWAITING_UPLOAD", "object_key": object_key, "owner_sub": owner, "created_at": _now()}
+    data = {"document_id": document_id, "evaluation_id": evaluation_id, "file_name": safe_file_name, "media_type": payload["media_type"], "document_role": role, "vendor_id": vendor_id, "proposal_id": proposal_id, "ingestion_status": "AWAITING_UPLOAD", "object_key": object_key, "owner_sub": owner, "workspace_id": workspace_id, "created_at": _now()}
     table.put_item(Item={"pk": f"EVAL#{evaluation_id}", "sk": f"DOC#{document_id}", **data})
     url = s3.generate_presigned_url("put_object", Params={"Bucket": os.environ["UPLOADS_BUCKET"], "Key": object_key, "ContentType": payload["media_type"]}, ExpiresIn=900)
     response_data = {"document_id": document_id, "ingestion_status": "AWAITING_UPLOAD", "upload": {"method": "PUT", "url": url, "expires_at": expires_at.replace(microsecond=0).isoformat().replace("+00:00", "Z"), "required_headers": {"Content-Type": payload["media_type"]}}}
     if idem:
-        table.put_item(Item={**_idempotency(str(idem)), "owner_sub": owner, "response": response_data, "status": 201, "created_at": _now()})
+        table.put_item(Item={**_idempotency(str(idem), workspace_id or ""), "owner_sub": owner, "workspace_id": workspace_id, "response": response_data, "status": 201, "created_at": _now()})
     return _success(response_data, event, 201)
 
 
@@ -375,7 +394,7 @@ def _complete_document(event: dict[str, Any], evaluation_id: str, document_id: s
     table, s3, sfn = _clients()
     key = {"pk": f"EVAL#{evaluation_id}", "sk": f"DOC#{document_id}"}
     document = table.get_item(Key=key, ConsistentRead=True).get("Item")
-    if not document or document.get("owner_sub") != _owner(event):
+    if not document or document.get("workspace_id") != _workspace_id(event):
         return _error(404, "NOT_FOUND", "Document was not found", event)
     if document.get("ingestion_status") == "PROCESSING":
         return _success({"document_id": document_id, "ingestion_status": "PROCESSING", "job_id": document.get("job_id")}, event, 202)
@@ -394,7 +413,7 @@ def _complete_document(event: dict[str, Any], evaluation_id: str, document_id: s
     job_id = f"JOB_INGEST_{uuid4().hex[:16]}"
     table.update_item(Key=key, UpdateExpression="SET ingestion_status = :status, job_id = :job, verified_size = :size, verified_at = :at", ExpressionAttributeValues={":status": "PROCESSING", ":job": job_id, ":size": head.get("ContentLength"), ":at": _now()})
     if os.environ.get("STATE_MACHINE_ARN"):
-        sfn.start_execution(stateMachineArn=os.environ["STATE_MACHINE_ARN"], name=job_id, input=json.dumps({"action": "INGEST", "job_id": job_id, "evaluation_id": evaluation_id, "document_id": document_id}))
+        sfn.start_execution(stateMachineArn=os.environ["STATE_MACHINE_ARN"], name=job_id, input=json.dumps({"action": "INGEST", "job_id": job_id, "evaluation_id": evaluation_id, "document_id": document_id, "workspace_id": _workspace_id(event)}))
     return _success({"document_id": document_id, "ingestion_status": "PROCESSING", "job_id": job_id}, event, 202)
 
 
@@ -412,14 +431,15 @@ def _start_async(event: dict[str, Any], evaluation_id: str, action: str, prefix:
         return _error(404, "NOT_FOUND", "Evaluation was not found", event)
     table, _, sfn = _clients()
     owner = _owner(event)
+    workspace_id = _workspace_id(event)
     idem = event.get("headers", {}).get("idempotency-key") or event.get("headers", {}).get("Idempotency-Key")
     if idem:
-        prior = table.get_item(Key=_idempotency(str(idem)), ConsistentRead=True).get("Item")
-        if prior and prior.get("owner_sub") == owner:
+        prior = table.get_item(Key=_idempotency(str(idem), workspace_id or ""), ConsistentRead=True).get("Item")
+        if prior and prior.get("workspace_id") == workspace_id:
             return _success(prior["response"], event, int(prior.get("status", 202)))
     job_id = f"{prefix}{uuid4().hex[:16]}"
     response_data = {("run_id" if action == "EVALUATE" else "job_id"): job_id, "status": status}
-    table.put_item(Item={"pk": f"EVAL#{evaluation_id}", "sk": f"JOB#{job_id}", "job_id": job_id, "run_id": job_id if action == "EVALUATE" else None, "owner_sub": owner, "status": status, "action": action, "created_at": _now()})
+    table.put_item(Item={"pk": f"EVAL#{evaluation_id}", "sk": f"JOB#{job_id}", "job_id": job_id, "run_id": job_id if action == "EVALUATE" else None, "owner_sub": owner, "workspace_id": workspace_id, "status": status, "action": action, "created_at": _now()})
     target_status = {"EXTRACT_REQUIREMENTS": "EXTRACTING_REQUIREMENTS", "EVALUATE": "EVALUATING"}.get(action)
     if target_status:
         table.update_item(
@@ -429,9 +449,9 @@ def _start_async(event: dict[str, Any], evaluation_id: str, action: str, prefix:
             ExpressionAttributeValues={":status": target_status, ":at": _now()},
         )
     if idem:
-        table.put_item(Item={**_idempotency(str(idem)), "owner_sub": owner, "response": response_data, "status": 202, "created_at": _now()})
+        table.put_item(Item={**_idempotency(str(idem), workspace_id or ""), "owner_sub": owner, "workspace_id": workspace_id, "response": response_data, "status": 202, "created_at": _now()})
     if os.environ.get("STATE_MACHINE_ARN"):
-        sfn.start_execution(stateMachineArn=os.environ["STATE_MACHINE_ARN"], name=job_id, input=json.dumps({"action": action, "job_id": job_id, "run_id": job_id if action == "EVALUATE" else None, "evaluation_id": evaluation_id, **payload}))
+        sfn.start_execution(stateMachineArn=os.environ["STATE_MACHINE_ARN"], name=job_id, input=json.dumps({"action": action, "job_id": job_id, "run_id": job_id if action == "EVALUATE" else None, "evaluation_id": evaluation_id, "workspace_id": workspace_id, **payload}))
     return _success(response_data, event, 202)
 
 
@@ -531,8 +551,9 @@ def _review(event: dict[str, Any], evaluation_id: str, result_id: str) -> dict[s
         review = HumanReview(human_review_id=f"REV_{uuid4().hex[:16]}", evaluation_result_id=result_id, action=action, system_state=EvaluationState(item["payload"]["state"]), system_score=item["payload"].get("suggested_score"), final_state=body.get("final_state"), final_score=body.get("final_score"), rationale=body.get("rationale"), reviewer_sub=_owner(event) or "unknown", reviewed_at=datetime.now(timezone.utc))
     except ValueError as exc:
         return _error(400, "VALIDATION_ERROR", str(exc), event)
-    table.put_item(Item={"pk": f"EVAL#{evaluation_id}", "sk": f"REV#{result_id}#{review.human_review_id}", "payload": ddb_safe(review.model_dump(mode="json")), "created_at": _now(), "owner_sub": _owner(event)})
-    table.put_item(Item=_audit_item(evaluation_id, "HUMAN_REVIEW_RECORDED", _owner(event) or "unknown", {"evaluation_result_id": result_id, "action": review.action.value, "system_state": review.system_state.value, "final_state": review.final_state.value if review.final_state else None}))
+    workspace_id = _workspace_id(event) or ""
+    table.put_item(Item={"pk": f"EVAL#{evaluation_id}", "sk": f"REV#{result_id}#{review.human_review_id}", "payload": ddb_safe(review.model_dump(mode="json")), "created_at": _now(), "owner_sub": _owner(event), "workspace_id": workspace_id})
+    table.put_item(Item=_audit_item(evaluation_id, "HUMAN_REVIEW_RECORDED", _owner(event) or "unknown", workspace_id, {"evaluation_result_id": result_id, "action": review.action.value, "system_state": review.system_state.value, "final_state": review.final_state.value if review.final_state else None}))
     return _success(review.model_dump(mode="json"), event, 201)
 
 
@@ -549,13 +570,14 @@ def _start_export(event: dict[str, Any], evaluation_id: str) -> dict[str, Any]:
     table, _, _ = _clients()
     export_id = f"EXP_{uuid4().hex[:16]}"
     content = _render_export(table, evaluation_id)
-    item = {"pk": f"EVAL#{evaluation_id}", "sk": f"EXP#{export_id}", "export_id": export_id, "status": "READY", "format": format_name, "generated_at": _now(), "report_version": 1, "owner_sub": _owner(event)}
+    workspace_id = _workspace_id(event) or ""
+    item = {"pk": f"EVAL#{evaluation_id}", "sk": f"EXP#{export_id}", "export_id": export_id, "status": "READY", "format": format_name, "generated_at": _now(), "report_version": 1, "owner_sub": _owner(event), "workspace_id": workspace_id}
     if format_name == "PDF":
         item["content_base64"] = base64.b64encode(_pdf_bytes(content)).decode("ascii")
     else:
         item["content"] = content
     table.put_item(Item=item)
-    table.put_item(Item=_audit_item(evaluation_id, "EXPORT_GENERATED", _owner(event) or "unknown", {"export_id": export_id, "format": format_name}))
+    table.put_item(Item=_audit_item(evaluation_id, "EXPORT_GENERATED", _owner(event) or "unknown", workspace_id, {"export_id": export_id, "format": format_name}))
     return _success({"export_id": export_id, "status": "READY"}, event, 202)
 
 
@@ -579,6 +601,10 @@ def handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
         return _success(_demo_fixture(), event)
     if not _owner(event):
         return _error(401, "UNAUTHENTICATED", "A valid Cognito access token is required", event)
+    if not _workspace_id(event):
+        return _error(403, "WORKSPACE_REQUIRED", "The Cognito token must include workspace_id", event)
+    if method != "GET" and not (_groups(event) & WRITE_ROLES):
+        return _error(403, "FORBIDDEN", "The Cognito group is read-only or missing", event)
     path_parameters = event.get("pathParameters") or {}
     try:
         if path == "/api/v1/evaluations" and method == "POST":

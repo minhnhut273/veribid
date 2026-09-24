@@ -29,3 +29,21 @@ Ship the contract-first VeriBid MVP as a real AWS-hosted application with a publ
 ## Ordering rules
 
 P0 ship-gate work and the complete P1 vertical slice precede P2 polish. The physical DynamoDB layout, parser choices, IaC mechanism, retrieval method and Bedrock model are recorded in `DECISIONS.md`; they do not alter the authoritative logical contracts.
+
+## Plan alignment and Sprint 1
+
+The execution plan is aligned to the current repository and deployed baseline:
+
+- **IaC:** AWS CDK v2 TypeScript is the only infrastructure mechanism. Use `npm run build`, `cdk synth --strict`, `cdk diff`, and `cdk deploy`; do not introduce SAM or Serverless Framework files.
+- **Bedrock:** keep Claude Sonnet 4.5 as the configured evaluator/verifier model. Prompt caching uses Bedrock Converse `cachePoint` and provider telemetry (`cache_read_input_tokens` / `cache_write_input_tokens`); do not add a DynamoDB `BedrockCache` table.
+- **Runtime:** keep Lambda on Python 3.13 and CI on the compatible Python 3.12 lane unless a tested runtime change is explicitly approved.
+- **Textract:** scanned-PDF/Textract remains outside the current MVP claim. A future integration may use Step Functions AWS SDK service integration, but Sprint 1 does not provision or claim it.
+
+Sprint 1 is now the workspace authorization slice:
+
+1. Provision Cognito groups `TenantAdmin`, `SourcingLead`, and `Auditor`, plus an immutable `custom:workspace_id` attribute and a V2 Pre Token Generation trigger that emits `workspace_id` in access tokens.
+2. Require the token's `workspace_id` claim in protected API requests and persist it on evaluation aggregates and derived DynamoDB records. Workspace scope, not `owner_sub`, controls tenant visibility; `owner_sub` remains actor/audit metadata.
+3. Allow `TenantAdmin` and `SourcingLead` to mutate evaluation workflows; keep `Auditor` read-only within its workspace.
+4. Run the workspace authorization test script and CDK build/synth checks.
+
+Definition of Done: a synthesized stack contains all three groups and the workspace attribute; same-workspace users can read shared evaluation state; a different workspace receives `404`; an Auditor mutation receives `403`; and existing append-only review/audit semantics remain intact.

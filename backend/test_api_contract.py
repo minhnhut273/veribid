@@ -49,9 +49,9 @@ class FakeStepFunctions:
         self.calls.append(kwargs)
 
 
-def event(path, method="GET", body=None, params=None, idem=None):
+def event(path, method="GET", body=None, params=None, idem=None, workspace_id="workspace-1", groups=("TenantAdmin",)):
     headers = {"idempotency-key": idem} if idem else {}
-    return {"rawPath": path, "body": json.dumps(body) if body is not None else None, "headers": headers, "pathParameters": params or {}, "requestContext": {"requestId": "req-test", "http": {"method": method}, "authorizer": {"jwt": {"claims": {"sub": "user-1"}}}}}
+    return {"rawPath": path, "body": json.dumps(body) if body is not None else None, "headers": headers, "pathParameters": params or {}, "requestContext": {"requestId": "req-test", "http": {"method": method}, "authorizer": {"jwt": {"claims": {"sub": "user-1", "custom:workspace_id": workspace_id, "cognito:groups": list(groups)}}}}}
 
 
 def test_create_evaluation_is_idempotent(monkeypatch):
@@ -66,7 +66,7 @@ def test_create_evaluation_is_idempotent(monkeypatch):
 
 def test_upload_requires_supported_media_and_vendor_pair(monkeypatch):
     table, s3, sfn = FakeTable(), FakeS3(), FakeStepFunctions()
-    table.put_item(Item={"pk": "EVAL#EVL_1", "sk": "META", "owner_sub": "user-1", "evaluation_id": "EVL_1", "name": "RFP", "status": "DRAFT", "created_at": "now"})
+    table.put_item(Item={"pk": "EVAL#EVL_1", "sk": "META", "owner_sub": "user-1", "workspace_id": "workspace-1", "evaluation_id": "EVL_1", "name": "RFP", "status": "DRAFT", "created_at": "now"})
     monkeypatch.setattr(api, "_clients", lambda: (table, s3, sfn))
     unsupported = api.handler(event("/api/v1/evaluations/EVL_1/documents", "POST", {"file_name": "a.txt", "media_type": "text/plain", "document_role": "BUYER_RFP"}, {"evaluation_id": "EVL_1"}), None)
     partial = api.handler(event("/api/v1/evaluations/EVL_1/documents", "POST", {"file_name": "a.pdf", "media_type": "application/pdf", "document_role": "VENDOR_PROPOSAL", "vendor_id": "VEN_A"}, {"evaluation_id": "EVL_1"}), None)
@@ -77,8 +77,8 @@ def test_complete_upload_verifies_object_before_starting_worker(monkeypatch):
     table, s3, sfn = FakeTable(), FakeS3(), FakeStepFunctions()
     monkeypatch.setenv("UPLOADS_BUCKET", "bucket")
     monkeypatch.setenv("STATE_MACHINE_ARN", "arn:aws:states:us-east-1:123:stateMachine:test")
-    table.put_item(Item={"pk": "EVAL#EVL_1", "sk": "META", "owner_sub": "user-1", "evaluation_id": "EVL_1", "name": "RFP", "status": "DRAFT", "created_at": "now"})
-    table.put_item(Item={"pk": "EVAL#EVL_1", "sk": "DOC#DOC_1", "document_id": "DOC_1", "owner_sub": "user-1", "object_key": "evaluations/EVL_1/documents/DOC_1/rfp.pdf", "media_type": "application/pdf", "ingestion_status": "AWAITING_UPLOAD"})
+    table.put_item(Item={"pk": "EVAL#EVL_1", "sk": "META", "owner_sub": "user-1", "workspace_id": "workspace-1", "evaluation_id": "EVL_1", "name": "RFP", "status": "DRAFT", "created_at": "now"})
+    table.put_item(Item={"pk": "EVAL#EVL_1", "sk": "DOC#DOC_1", "document_id": "DOC_1", "owner_sub": "user-1", "workspace_id": "workspace-1", "object_key": "evaluations/EVL_1/documents/DOC_1/rfp.pdf", "media_type": "application/pdf", "ingestion_status": "AWAITING_UPLOAD"})
     monkeypatch.setattr(api, "_clients", lambda: (table, s3, sfn))
     response = api.handler(event("/api/v1/evaluations/EVL_1/documents/DOC_1/complete-upload", "POST", {}, {"evaluation_id": "EVL_1", "document_id": "DOC_1"}), None)
     body = json.loads(response["body"])
@@ -91,8 +91,8 @@ def test_complete_upload_rejects_missing_object(monkeypatch):
     table, s3, sfn = FakeTable(), FakeS3(), FakeStepFunctions()
     monkeypatch.setenv("UPLOADS_BUCKET", "bucket")
     s3.head = None
-    table.put_item(Item={"pk": "EVAL#EVL_1", "sk": "META", "owner_sub": "user-1", "evaluation_id": "EVL_1", "name": "RFP", "status": "DRAFT", "created_at": "now"})
-    table.put_item(Item={"pk": "EVAL#EVL_1", "sk": "DOC#DOC_1", "document_id": "DOC_1", "owner_sub": "user-1", "object_key": "missing", "media_type": "application/pdf", "ingestion_status": "AWAITING_UPLOAD"})
+    table.put_item(Item={"pk": "EVAL#EVL_1", "sk": "META", "owner_sub": "user-1", "workspace_id": "workspace-1", "evaluation_id": "EVL_1", "name": "RFP", "status": "DRAFT", "created_at": "now"})
+    table.put_item(Item={"pk": "EVAL#EVL_1", "sk": "DOC#DOC_1", "document_id": "DOC_1", "owner_sub": "user-1", "workspace_id": "workspace-1", "object_key": "missing", "media_type": "application/pdf", "ingestion_status": "AWAITING_UPLOAD"})
     monkeypatch.setattr(api, "_clients", lambda: (table, s3, sfn))
     response = api.handler(event("/api/v1/evaluations/EVL_1/documents/DOC_1/complete-upload", "POST", {}, {"evaluation_id": "EVL_1", "document_id": "DOC_1"}), None)
     assert response["statusCode"] == 422
@@ -103,8 +103,8 @@ def test_complete_upload_rejects_oversized_object(monkeypatch):
     table, s3, sfn = FakeTable(), FakeS3(), FakeStepFunctions()
     monkeypatch.setenv("UPLOADS_BUCKET", "bucket")
     s3.head = {"ContentLength": 25 * 1024 * 1024 + 1, "ContentType": "application/pdf"}
-    table.put_item(Item={"pk": "EVAL#EVL_1", "sk": "META", "owner_sub": "user-1", "evaluation_id": "EVL_1", "name": "RFP", "status": "DRAFT", "created_at": "now"})
-    table.put_item(Item={"pk": "EVAL#EVL_1", "sk": "DOC#DOC_1", "document_id": "DOC_1", "owner_sub": "user-1", "object_key": "large", "media_type": "application/pdf", "ingestion_status": "AWAITING_UPLOAD"})
+    table.put_item(Item={"pk": "EVAL#EVL_1", "sk": "META", "owner_sub": "user-1", "workspace_id": "workspace-1", "evaluation_id": "EVL_1", "name": "RFP", "status": "DRAFT", "created_at": "now"})
+    table.put_item(Item={"pk": "EVAL#EVL_1", "sk": "DOC#DOC_1", "document_id": "DOC_1", "owner_sub": "user-1", "workspace_id": "workspace-1", "object_key": "large", "media_type": "application/pdf", "ingestion_status": "AWAITING_UPLOAD"})
     monkeypatch.setattr(api, "_clients", lambda: (table, s3, sfn))
     response = api.handler(event("/api/v1/evaluations/EVL_1/documents/DOC_1/complete-upload", "POST", {}, {"evaluation_id": "EVL_1", "document_id": "DOC_1"}), None)
     assert response["statusCode"] == 413
@@ -114,7 +114,7 @@ def test_complete_upload_rejects_oversized_object(monkeypatch):
 def test_human_review_is_append_only_and_matrix_exposes_final_decision(monkeypatch):
     table, s3, sfn = FakeTable(), FakeS3(), FakeStepFunctions()
     evaluation_id = "EVL_1"
-    table.put_item(Item={"pk": f"EVAL#{evaluation_id}", "sk": "META", "owner_sub": "user-1", "evaluation_id": evaluation_id, "name": "RFP", "status": "READY_FOR_REVIEW", "created_at": "now"})
+    table.put_item(Item={"pk": f"EVAL#{evaluation_id}", "sk": "META", "owner_sub": "user-1", "workspace_id": "workspace-1", "evaluation_id": evaluation_id, "name": "RFP", "status": "READY_FOR_REVIEW", "created_at": "now"})
     requirement = {"requirement_id": "REQ_1", "requirement_code": "TECH-01", "title": "Availability", "category": "TECHNICAL", "mandatory": True, "is_disqualifying": False, "weight": 10}
     result = {"evaluation_result_id": "RES_1", "requirement_id": "REQ_1", "vendor_id": "VEN_A", "proposal_id": "PROP_A", "state": "NOT_SATISFIED", "suggested_score": 2, "max_score": 10, "rationale": "deterministic result", "evidence_claims": [], "conflict_pairs": [], "deterministic_result": {"tool": "numeric_threshold_check", "input": {}, "passed": False, "authoritative_state": "NOT_SATISFIED", "result": None}}
     table.put_item(Item={"pk": f"EVAL#{evaluation_id}", "sk": "REQ#REQ_1", "payload": requirement})
@@ -136,7 +136,7 @@ def test_human_review_is_append_only_and_matrix_exposes_final_decision(monkeypat
 def test_export_contains_evidence_trace_and_pdf_payload(monkeypatch):
     table, s3, sfn = FakeTable(), FakeS3(), FakeStepFunctions()
     evaluation_id = "EVL_1"
-    table.put_item(Item={"pk": f"EVAL#{evaluation_id}", "sk": "META", "owner_sub": "user-1", "evaluation_id": evaluation_id, "name": "RFP", "status": "READY_FOR_EXPORT", "created_at": "now"})
+    table.put_item(Item={"pk": f"EVAL#{evaluation_id}", "sk": "META", "owner_sub": "user-1", "workspace_id": "workspace-1", "evaluation_id": evaluation_id, "name": "RFP", "status": "READY_FOR_EXPORT", "created_at": "now"})
     table.put_item(Item={"pk": f"EVAL#{evaluation_id}", "sk": "RES#RES_1", "payload": {"evaluation_result_id": "RES_1", "requirement_id": "REQ_1", "vendor_id": "VEN_A", "proposal_id": "PROP_A", "state": "SATISFIED", "suggested_score": 9, "max_score": 10, "rationale": "source", "evidence_claims": [{"relation": "supports", "claim_text": "Availability is committed.", "source_pointer": {"document_name": "proposal.pdf", "page_number": 4}}], "conflict_pairs": []}})
     table.put_item(Item={"pk": f"EVAL#{evaluation_id}", "sk": "REQ#REQ_1", "payload": {"requirement_id": "REQ_1", "requirement_code": "TECH-01"}})
     monkeypatch.setattr(api, "_clients", lambda: (table, s3, sfn))
@@ -152,7 +152,7 @@ def test_export_contains_evidence_trace_and_pdf_payload(monkeypatch):
 def test_export_renders_both_conflict_sides_and_source_trace(monkeypatch):
     table, s3, sfn = FakeTable(), FakeS3(), FakeStepFunctions()
     evaluation_id = "EVL_CONFLICT"
-    table.put_item(Item={"pk": f"EVAL#{evaluation_id}", "sk": "META", "owner_sub": "user-1", "evaluation_id": evaluation_id, "name": "RFP", "status": "READY_FOR_EXPORT", "created_at": "now"})
+    table.put_item(Item={"pk": f"EVAL#{evaluation_id}", "sk": "META", "owner_sub": "user-1", "workspace_id": "workspace-1", "evaluation_id": evaluation_id, "name": "RFP", "status": "READY_FOR_EXPORT", "created_at": "now"})
     table.put_item(Item={"pk": f"EVAL#{evaluation_id}", "sk": "REQ#REQ_1", "payload": {"requirement_id": "REQ_1", "requirement_code": "SEC-01"}})
     table.put_item(Item={"pk": f"EVAL#{evaluation_id}", "sk": "RES#RES_1", "payload": {
         "evaluation_result_id": "RES_1", "requirement_id": "REQ_1", "vendor_id": "VEN_A", "proposal_id": "PROP_A",
