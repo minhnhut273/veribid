@@ -90,7 +90,8 @@ function Demo({ demo, onBack }: { demo: DemoDto | null; onBack: () => void }) {
 
 const StateBadge = memo(function StateBadge({ state, confidence }: { state: string; confidence?: number }) {
   const className = state === 'SATISFIED' ? 'satisfied' : state === 'CONFLICTING_EVIDENCE' ? 'conflict' : state === 'NOT_SATISFIED' ? 'not' : state === 'PARTIALLY_SATISFIED' ? 'partial' : 'insufficient';
-  return <div className={`state ${className}`}><strong>{state.replaceAll('_', ' ')}</strong>{confidence !== undefined && <small>{Math.round(confidence * 100)}% confidence</small>}</div>;
+  const icon = state === 'SATISFIED' ? '✓' : state === 'CONFLICTING_EVIDENCE' ? '⚠' : state === 'NOT_SATISFIED' ? '✕' : state === 'PARTIALLY_SATISFIED' ? '~' : '?';
+  return <div className={`state ${className}`}><strong><span className="badge-icon">{icon}</span> {state.replaceAll('_', ' ')}</strong>{confidence !== undefined && <small>{Math.round(confidence * 100)}% confidence</small>}</div>;
 });
 
 function Workspace({ onBack }: { onBack: () => void }) {
@@ -277,6 +278,15 @@ function ResultPanel({ result, onClose, onReview }: { result: ResultDto; onClose
   const [finalState, setFinalState] = useState(result.state);
   const [score, setScore] = useState(String(result.suggested_score ?? 0));
   const [rationale, setRationale] = useState('');
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
   const requiresDecision = action === 'OVERRIDE';
   const claims = new Map(result.evidence_claims.map((claim, index) => [claim.evidence_claim_id ?? `claim-${index}`, claim]));
   const finalReview = result.human_review?.action === 'OVERRIDE' ? `${result.human_review.final_state ?? 'state not supplied'} · score ${result.human_review.final_score ?? 'not supplied'}` : result.human_review?.action === 'ACCEPT' ? 'ACCEPT system suggestion' : result.human_review?.action ?? 'No human decision recorded';
