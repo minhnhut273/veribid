@@ -17,18 +17,15 @@
 <p align="center">
   <img src="https://img.shields.io/badge/Python-3.12%20%7C%203.13-3776AB?style=flat-square&logo=python&logoColor=white" alt="Python Version" />
   <img src="https://img.shields.io/badge/TypeScript-5.0-3178C6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript" />
-  <img src="https://img.shields.io/badge/AWS_Bedrock-Claude_3.5_Sonnet-FF9900?style=flat-square&logo=amazon-aws&logoColor=white" alt="AWS Bedrock" />
+  <img src="https://img.shields.io/badge/AWS_Bedrock-Claude_Sonnet_4.5-FF9900?style=flat-square&logo=amazon-aws&logoColor=white" alt="AWS Bedrock" />
   <img src="https://img.shields.io/badge/AWS_CDK-v2.100+-FF9900?style=flat-square&logo=amazon-aws&logoColor=white" alt="AWS CDK" />
-  <img src="https://img.shields.io/badge/Coverage-100%25-brightgreen.svg?style=flat-square" alt="Coverage" />
-  <img src="https://img.shields.io/badge/OWASP_ASI_2026-Compliant-blue.svg?style=flat-square" alt="OWASP ASI" />
-  <img src="https://img.shields.io/badge/License-Apache_2.0-lightgrey.svg?style=flat-square" alt="License" />
 </p>
 
 ---
 
 ## 💡 Overview & Thesis
 
-**VeriBid** is an enterprise-grade, evidence-driven bid evaluation engine designed to automate RFP (Request for Proposal) analysis while eliminating AI hallucinations. 
+**VeriBid** is an evidence-driven bid evaluation engine designed to assist RFP (Request for Proposal) analysis while reducing unsupported AI assessments through source grounding and abstention. 
 
 Unlike generic procurement platforms or ungrounded AI chatbots, VeriBid enforces strict **SourcePointer claim-grounding**, **Skeptical Verification**, and **Deterministic Mathematical Calculations**. AI agent specialists generate source-attributed suggestions, but **Human Reviewers own final binding decisions**.
 
@@ -76,7 +73,7 @@ flowchart TD
 
     subgraph Verification ["Guardrails & Grounding Engine"]
         MATH["Deterministic Math Engine (TCO / Thresholds)"]
-        BEDROCK["AWS Bedrock (Claude 3.5 + Prompt Caching)"]
+        BEDROCK["AWS Bedrock (Claude Sonnet 4.5 + Prompt Caching)"]
         VERIFY["Skeptical Verifier"]
     end
 
@@ -163,7 +160,7 @@ VeriBid/
 │   ├── specialists.py              # Category Specialist Router (Technical, Commercial, Compliance)
 │   ├── verifier.py                 # Skeptical Verifier Guardrails & Conflict Detection
 │   └── worker.py                   # Step Functions Async Pipeline Worker
-├── frontend/                       # React 18 + TypeScript Web Application
+├── frontend/                       # React 19 + TypeScript Web Application
 │   ├── src/                        # UI Components, Matrix Views & Amplify Auth Integration
 │   └── vite.config.ts              # Vite & Vitest Configuration
 ├── infra/                          # AWS CDK v2 Infrastructure as Code (TypeScript)
@@ -259,15 +256,13 @@ npx cdk synth
 
 ## 🔒 Security & Compliance
 
-- **OWASP ASI 2026 Compliant**: Audited against the OWASP Agentic Security Initiative Top 10 risks (Goal Alignment, Grounding, Unauthorized Access, Prompt Injection).
+- **Security scope**: Workspace authorization, role checks, source grounding, and fail-closed typed-output behavior are covered in the implementation and test suite; a complete OWASP ASI certification claim is intentionally not made here.
 - **Tenant Scope Enforcement**: Workspace isolation enforced at the API boundary before DynamoDB query execution.
 - **Strict Presigned Upload Validation**: S3 uploads undergo mandatory byte size and MIME type verification before triggering worker parsers.
-- **Zero Hallucination Guarantee**: Abstains from score assignments whenever evidence claims fail strict validation.
+- **Evidence abstention**: The verifier abstains from score assignments when evidence claims fail strict validation; this is a control behavior, not a zero-hallucination guarantee.
 
 ---
 
 ## 📄 License & Attribution
 
-Distributed under the **Apache License 2.0**. See [`LICENSE`](LICENSE) for details.
-
-Copyright © 2026 VeriBid Core Contributors.
+No license file is currently declared in this repository. Add an explicit license before distributing the project as open source.
