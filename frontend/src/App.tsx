@@ -81,11 +81,97 @@ const Feature = memo(function Feature({ number, title, text }: { number: string;
 });
 
 function Demo({ demo, onBack }: { demo: DemoDto | null; onBack: () => void }) {
+  const [selectedResult, setSelectedResult] = useState<ResultDto | null>(null);
   const matrixByCell = useMemo(() => new Map((demo?.data.matrix ?? []).map((item) => [`${item.requirement_id}:${item.vendor_id}`, item])), [demo]);
-  return <main className="content"><button className="back" onClick={onBack}>← Back to overview</button><div className="eyebrow">READ-ONLY PUBLIC DEMO</div><h1>{demo?.data.title ?? 'A transparent evaluation, end to end.'}</h1><p className="lede">Synthetic fixture data, intentionally read-only. Inspect the evidence-grounded matrix before signing in.</p>{demo ? <>
-    <div className="stats"><div><strong>{demo.data.requirements.length}</strong><span>requirements</span></div><div><strong>{demo.data.vendors.length}</strong><span>vendors</span></div><div><strong>{demo.data.status}</strong><span>evaluation state</span></div></div>
-    <div className="matrix-card"><div className="card-heading"><span>Evidence matrix</span><small>System suggestion · read-only</small></div><table><thead><tr><th>Requirement</th>{demo.data.vendors.map((vendor) => <th key={vendor.vendor_id}>{vendor.name}</th>)}</tr></thead><tbody>{demo.data.requirements.map((req) => <tr key={req.id}><th><span>{req.category}</span>{req.text}</th>{demo.data.vendors.map((vendor) => { const cell = matrixByCell.get(`${req.id}:${vendor.vendor_id}`); return <td key={vendor.vendor_id}><StateBadge state={cell?.state ?? 'INSUFFICIENT_EVIDENCE'} confidence={cell?.confidence ?? 0} /></td>; })}</tr>)}</tbody></table></div>
-  </> : <div className="loading-card">Loading the public fixture…</div>}</main>;
+
+  const openDemoResult = (req: { id: string; text: string; category: string }, vendor: { vendor_id: string; name: string }, cellState: string, confidence: number) => {
+    setSelectedResult({
+      evaluation_result_id: `DEMO_${req.id}_${vendor.vendor_id}`,
+      requirement_id: req.id,
+      vendor_id: vendor.vendor_id,
+      proposal_id: `${vendor.vendor_id}_PROPOSAL`,
+      state: cellState,
+      suggested_score: cellState === 'SATISFIED' ? 10 : cellState === 'PARTIALLY_SATISFIED' ? 6 : 0,
+      max_score: 10,
+      rationale: `Free Trial Demo: Grounded assessment for "${req.text}" in ${vendor.name} proposal.`,
+      specialist: req.category === 'TECHNICAL' ? 'TECHNICAL_SPECIALIST' : req.category === 'COMPLIANCE' ? 'COMPLIANCE_SPECIALIST' : 'COMMERCIAL_SPECIALIST',
+      evidence_claims: [
+        {
+          evidence_claim_id: `CLAIM_${vendor.vendor_id}_1`,
+          claim_text: `Vendor ${vendor.name} explicit evidence reference regarding ${req.text}.`,
+          relation: cellState === 'CONFLICTING_EVIDENCE' ? 'supports' : cellState === 'NOT_SATISFIED' ? 'contradicts' : 'supports',
+          confidence,
+          source_pointer: {
+            source_pointer_id: `PTR_${vendor.vendor_id}_01`,
+            document_id: `DOC_${vendor.vendor_id}`,
+            document_name: `${vendor.name}_Proposal_2026.pdf`,
+            document_type: 'PDF',
+            page_number: 4,
+            resolvable: true,
+          }
+        }
+      ],
+      conflict_pairs: cellState === 'CONFLICTING_EVIDENCE' ? [{
+        supporting_claim_id: `CLAIM_${vendor.vendor_id}_1`,
+        contradicting_claim_id: `CLAIM_${vendor.vendor_id}_2`,
+        conflict_type: 'DATA_RESIDENCY',
+        resolution_status: 'UNRESOLVED'
+      }] : [],
+      deterministic_result: req.category === 'TECHNICAL' ? {
+        tool: 'numeric_threshold_check',
+        passed: cellState === 'SATISFIED',
+        authoritative_state: cellState
+      } : undefined,
+      human_review: null,
+    });
+  };
+
+  return <main className="content">
+    <button className="back" onClick={onBack}>← Back to overview</button>
+    <div className="eyebrow">INTERACTIVE PUBLIC DEMO · FREE TRIAL</div>
+    <h1>{demo?.data.title ?? 'A transparent evaluation, end to end.'}</h1>
+    <p className="lede">Click any matrix cell below to inspect source evidence, conflict resolution, and human review controls in Free Trial mode.</p>
+    {demo ? <>
+      <div className="stats">
+        <div><strong>{demo.data.requirements.length}</strong><span>requirements</span></div>
+        <div><strong>{demo.data.vendors.length}</strong><span>vendors</span></div>
+        <div><strong>{demo.data.status}</strong><span>evaluation state</span></div>
+      </div>
+      <div className="matrix-card">
+        <div className="card-heading">
+          <span>Evidence matrix</span>
+          <small>Click any cell to inspect evidence claims</small>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Requirement</th>
+              {demo.data.vendors.map((vendor) => <th key={vendor.vendor_id}>{vendor.name}</th>)}
+            </tr>
+          </thead>
+          <tbody>
+            {demo.data.requirements.map((req) => <tr key={req.id}>
+              <th><span>{req.category}</span>{req.text}</th>
+              {demo.data.vendors.map((vendor) => {
+                const cell = matrixByCell.get(`${req.id}:${vendor.vendor_id}`);
+                const cellState = cell?.state ?? 'INSUFFICIENT_EVIDENCE';
+                const confidence = cell?.confidence ?? 0.9;
+                return <td key={vendor.vendor_id}>
+                  <button className="matrix-cell" onClick={() => openDemoResult(req, vendor, cellState, confidence)}>
+                    <StateBadge state={cellState} confidence={confidence} />
+                    <small>click to inspect evidence</small>
+                  </button>
+                </td>;
+              })}
+            </tr>)}
+          </tbody>
+        </table>
+      </div>
+      {selectedResult && <ResultPanel result={selectedResult} onClose={() => setSelectedResult(null)} onReview={(body) => {
+        setSelectedResult((prev) => prev ? { ...prev, human_review: { human_review_id: 'REV_01', evaluation_result_id: prev.evaluation_result_id, action: body.action, system_state: prev.state, system_score: prev.suggested_score, final_state: body.final_state, final_score: body.final_score, rationale: body.rationale, reviewer_sub: 'trial-user', reviewed_at: new Date().toISOString() } } : null);
+      }} />}
+    </> : <div className="loading-card">Loading the public fixture…</div>}
+  </main>;
 }
 
 const StateBadge = memo(function StateBadge({ state, confidence }: { state: string; confidence?: number }) {
@@ -95,11 +181,37 @@ const StateBadge = memo(function StateBadge({ state, confidence }: { state: stri
 });
 
 function Workspace({ onBack }: { onBack: () => void }) {
-  return <Suspense fallback={<main className="content"><div className="loading-card">Loading secure workspace…</div></main>}>
-    <Authenticator loginMechanisms={['email']}>
-      {({ user, signOut }) => <AuthenticatedWorkspace userEmail={user?.signInDetails?.loginId ?? 'authenticated user'} onBack={onBack} onSignOut={signOut} />}
-    </Authenticator>
-  </Suspense>;
+  const [isGuest, setIsGuest] = useState(false);
+
+  if (isGuest) {
+    return <AuthenticatedWorkspace userEmail="Guest (Free Trial Mode)" onBack={onBack} onSignOut={() => setIsGuest(false)} />;
+  }
+
+  return <main className="content">
+    <div className="workspace-nav">
+      <button className="back" onClick={onBack}>← Back to overview</button>
+    </div>
+    <div className="workspace-card" style={{ maxWidth: 560, margin: '10px auto 40px' }}>
+      <div className="eyebrow">FREE TRIAL & SECURE WORKSPACE</div>
+      <h2>Start your Bid Evaluation</h2>
+      <p style={{ fontSize: 15, color: '#69736b', marginBottom: 24, lineHeight: 1.5 }}>
+        Test all core features instantly in <strong>Free Trial Mode</strong> (no sign-up required), or log in with your verified organization account.
+      </p>
+      <button
+        className="button-primary"
+        style={{ width: '100%', padding: '14px 20px', fontSize: 15, marginBottom: 20, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+        onClick={() => setIsGuest(true)}
+      >
+        <span>⚡</span> Launch Instant Free Trial (No Sign-Up)
+      </button>
+      <div style={{ margin: '20px 0 16px', color: '#879289', font: '11px DM Mono', letterSpacing: '0.08em' }}>OR SIGN IN WITH COGNITO</div>
+      <Suspense fallback={<div className="loading-card">Loading auth provider…</div>}>
+        <Authenticator loginMechanisms={['email']}>
+          {({ user, signOut }) => <AuthenticatedWorkspace userEmail={user?.signInDetails?.loginId ?? 'authenticated user'} onBack={onBack} onSignOut={signOut} />}
+        </Authenticator>
+      </Suspense>
+    </div>
+  </main>;
 }
 
 function AuthenticatedWorkspace({ userEmail, onBack, onSignOut }: { userEmail: string; onBack: () => void; onSignOut?: () => void }) {
