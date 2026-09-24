@@ -95,6 +95,32 @@ class WorkspaceAuthorizationTests(unittest.TestCase):
             "workspace-a",
         )
 
+    def test_self_signup_user_without_explicit_workspace_id_can_create_evaluations(self) -> None:
+        token_event = {"userName": "newuser-123", "request": {"userAttributes": {"sub": "newuser-123"}}, "response": {}}
+        result = pre_token_handler(token_event, None)
+        claims = result["response"]["claimsAndScopeOverrideDetails"]["accessTokenGeneration"]["claimsToAddOrOverride"]
+        self.assertEqual(claims["workspace_id"], "WS_newuser_123")
+        self.assertEqual(claims["cognito:groups"], "TenantAdmin")
+
+        self_signup_event = {
+            "rawPath": "/api/v1/evaluations",
+            "body": json.dumps({"name": "Self Signup RFP"}),
+            "headers": {},
+            "pathParameters": {},
+            "requestContext": {
+                "requestId": "self-signup-test",
+                "http": {"method": "POST"},
+                "authorizer": {"jwt": {"claims": {
+                    "sub": "user-selfsignup-999",
+                }}},
+            },
+        }
+        response = api.handler(self_signup_event, None)
+        self.assertEqual(response["statusCode"], 201)
+        evaluation_id = json.loads(response["body"])["data"]["evaluation_id"]
+        stored = self.table.items[(f"EVAL#{evaluation_id}", "META")]
+        self.assertEqual(stored["workspace_id"], "WS_user_selfsignup_999")
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -273,16 +273,25 @@ def _owner(event: dict[str, Any]) -> str | None:
 def _workspace_id(event: dict[str, Any]) -> str | None:
     claims = _claims(event)
     value = claims.get("workspace_id") or claims.get("custom:workspace_id")
-    return str(value).strip() if value and str(value).strip() else None
+    if value and str(value).strip():
+        return str(value).strip()
+    owner = _owner(event)
+    if owner:
+        return f"WS_{owner.replace('-', '_')}"
+    return None
 
 
 def _groups(event: dict[str, Any]) -> set[str]:
     value = _claims(event).get("cognito:groups", [])
     if isinstance(value, str):
-        return {item.strip() for item in value.split(",") if item.strip()}
-    if isinstance(value, list):
-        return {str(item).strip() for item in value if str(item).strip()}
-    return set()
+        groups = {item.strip() for item in value.split(",") if item.strip()}
+    elif isinstance(value, list):
+        groups = {str(item).strip() for item in value if str(item).strip()}
+    else:
+        groups = set()
+    if not groups and _owner(event):
+        groups = {"TenantAdmin"}
+    return groups
 
 
 def _clients() -> tuple[Any, Any, Any]:
