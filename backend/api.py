@@ -289,8 +289,6 @@ def _groups(event: dict[str, Any]) -> set[str]:
         groups = {str(item).strip() for item in value if str(item).strip()}
     else:
         groups = set()
-    if not groups and _owner(event):
-        groups = {"TenantAdmin"}
     return groups
 
 

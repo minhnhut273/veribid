@@ -53,7 +53,7 @@ export function App() {
     </header>
     {page === 'home' && <Landing health={health} onDemo={() => navigate('demo')} onApp={() => navigate('app')} />}
     {page === 'demo' && <Demo demo={demo} onBack={() => navigate('home')} />}
-    {page === 'app' && <Workspace onBack={() => navigate('home')} />}
+    {page === 'app' && <Workspace onBack={() => navigate('home')} onDemo={() => navigate('demo')} />}
     {error && <div className="toast" role="status">{error}</div>}
     <footer><span>Evidence first. Decisions remain human.</span><span>API {health?.data.status ?? 'checking'}</span></footer>
   </div>;
@@ -84,53 +84,52 @@ function Demo({ demo, onBack }: { demo: DemoDto | null; onBack: () => void }) {
   const [selectedResult, setSelectedResult] = useState<ResultDto | null>(null);
   const matrixByCell = useMemo(() => new Map((demo?.data.matrix ?? []).map((item) => [`${item.requirement_id}:${item.vendor_id}`, item])), [demo]);
 
-  const openDemoResult = (req: { id: string; text: string; category: string }, vendor: { vendor_id: string; name: string }, cellState: string, confidence: number) => {
+  const openDemoResult = (req: { id: string; text: string; category: string }, vendor: { vendor_id: string; name: string }, cell: DemoDto['data']['matrix'][number]) => {
+    const claimIds = cell.source_pointers.map((_, index) => `DEMO_CLAIM_${vendor.vendor_id}_${req.id}_${index + 1}`);
     setSelectedResult({
       evaluation_result_id: `DEMO_${req.id}_${vendor.vendor_id}`,
       requirement_id: req.id,
       vendor_id: vendor.vendor_id,
       proposal_id: `${vendor.vendor_id}_PROPOSAL`,
-      state: cellState,
-      suggested_score: cellState === 'SATISFIED' ? 10 : cellState === 'PARTIALLY_SATISFIED' ? 6 : 0,
+      state: cell.state,
+      suggested_score: cell.state === 'SATISFIED' ? 10 : cell.state === 'PARTIALLY_SATISFIED' ? 6 : 0,
       max_score: 10,
-      rationale: `Free Trial Demo: Grounded assessment for "${req.text}" in ${vendor.name} proposal.`,
+      rationale: `Synthetic demo scenario for "${req.text}". This is not an AI-generated evaluation or an assessment of a real vendor document.`,
       specialist: req.category === 'TECHNICAL' ? 'TECHNICAL_SPECIALIST' : req.category === 'COMPLIANCE' ? 'COMPLIANCE_SPECIALIST' : 'COMMERCIAL_SPECIALIST',
-      evidence_claims: [
-        {
-          evidence_claim_id: `CLAIM_${vendor.vendor_id}_1`,
-          claim_text: `Vendor ${vendor.name} explicit evidence reference regarding ${req.text}.`,
-          relation: cellState === 'CONFLICTING_EVIDENCE' ? 'supports' : cellState === 'NOT_SATISFIED' ? 'contradicts' : 'supports',
-          confidence,
+      evidence_claims: cell.source_pointers.map((pointer, index) => {
+        const conflict = cell.conflict_pairs?.[0];
+        return {
+          evidence_claim_id: claimIds[index],
+          claim_text: conflict
+            ? `Synthetic scenario statement: ${index === 0 ? conflict.left : conflict.right}`
+            : `Synthetic fixture locator: ${pointer.locator}. No real proposal text or vendor file is included.`,
+          relation: cell.state === 'NOT_SATISFIED' || (conflict && index > 0) ? 'contradicts' : 'supports',
+          confidence: cell.confidence,
           source_pointer: {
-            source_pointer_id: `PTR_${vendor.vendor_id}_01`,
-            document_id: `DOC_${vendor.vendor_id}`,
-            document_name: `${vendor.name}_Proposal_2026.pdf`,
+            source_pointer_id: `DEMO_PTR_${pointer.document_id}_${pointer.page ?? 'NA'}`,
+            document_id: pointer.document_id,
+            document_name: `${pointer.document_id}.pdf (synthetic fixture)`,
             document_type: 'PDF',
-            page_number: 4,
-            resolvable: true,
-          }
-        }
-      ],
-      conflict_pairs: cellState === 'CONFLICTING_EVIDENCE' ? [{
-        supporting_claim_id: `CLAIM_${vendor.vendor_id}_1`,
-        contradicting_claim_id: `CLAIM_${vendor.vendor_id}_2`,
-        conflict_type: 'DATA_RESIDENCY',
-        resolution_status: 'UNRESOLVED'
-      }] : [],
-      deterministic_result: req.category === 'TECHNICAL' ? {
-        tool: 'numeric_threshold_check',
-        passed: cellState === 'SATISFIED',
-        authoritative_state: cellState
-      } : undefined,
+            page_number: pointer.page,
+            resolvable: false,
+          },
+        };
+      }),
+      conflict_pairs: (cell.conflict_pairs ?? []).map((_, index) => ({
+        supporting_claim_id: claimIds[index * 2] ?? claimIds[0] ?? `DEMO_MISSING_SUPPORT_${index}`,
+        contradicting_claim_id: claimIds[index * 2 + 1] ?? `DEMO_MISSING_CONTRADICTION_${index}`,
+        conflict_type: 'SYNTHETIC_DEMO_SCENARIO',
+        resolution_status: 'UNRESOLVED',
+      })),
       human_review: null,
     });
   };
 
   return <main className="content">
     <button className="back" onClick={onBack}>← Back to overview</button>
-    <div className="eyebrow">INTERACTIVE PUBLIC DEMO · FREE TRIAL</div>
+    <div className="eyebrow">INTERACTIVE PUBLIC DEMO · SYNTHETIC DATA</div>
     <h1>{demo?.data.title ?? 'A transparent evaluation, end to end.'}</h1>
-    <p className="lede">Click any matrix cell below to inspect source evidence, conflict resolution, and human review controls in Free Trial mode.</p>
+    <p className="lede">Explore the basic review flow without an account. All vendors, requirements, and evidence are synthetic; review changes stay in this browser session. No uploads or real AI analysis.</p>
     {demo ? <>
       <div className="stats">
         <div><strong>{demo.data.requirements.length}</strong><span>requirements</span></div>
@@ -154,11 +153,10 @@ function Demo({ demo, onBack }: { demo: DemoDto | null; onBack: () => void }) {
               <th><span>{req.category}</span>{req.text}</th>
               {demo.data.vendors.map((vendor) => {
                 const cell = matrixByCell.get(`${req.id}:${vendor.vendor_id}`);
-                const cellState = cell?.state ?? 'INSUFFICIENT_EVIDENCE';
-                const confidence = cell?.confidence ?? 0.9;
+                const demoCell = cell ?? { requirement_id: req.id, vendor_id: vendor.vendor_id, state: 'INSUFFICIENT_EVIDENCE', confidence: 0, source_pointers: [] };
                 return <td key={vendor.vendor_id}>
-                  <button className="matrix-cell" onClick={() => openDemoResult(req, vendor, cellState, confidence)}>
-                    <StateBadge state={cellState} confidence={confidence} />
+                  <button className="matrix-cell" onClick={() => openDemoResult(req, vendor, demoCell)}>
+                    <StateBadge state={demoCell.state} confidence={demoCell.confidence} />
                     <small>click to inspect evidence</small>
                   </button>
                 </td>;
@@ -167,8 +165,8 @@ function Demo({ demo, onBack }: { demo: DemoDto | null; onBack: () => void }) {
           </tbody>
         </table>
       </div>
-      {selectedResult && <ResultPanel result={selectedResult} onClose={() => setSelectedResult(null)} onReview={(body) => {
-        setSelectedResult((prev) => prev ? { ...prev, human_review: { human_review_id: 'REV_01', evaluation_result_id: prev.evaluation_result_id, action: body.action, system_state: prev.state, system_score: prev.suggested_score, final_state: body.final_state, final_score: body.final_score, rationale: body.rationale, reviewer_sub: 'trial-user', reviewed_at: new Date().toISOString() } } : null);
+      {selectedResult && <ResultPanel result={selectedResult} simulation onClose={() => setSelectedResult(null)} onReview={(body) => {
+        setSelectedResult((prev) => prev ? { ...prev, human_review: { human_review_id: 'DEMO_REV_01', evaluation_result_id: prev.evaluation_result_id, action: body.action, system_state: prev.state, system_score: prev.suggested_score, final_state: body.final_state, final_score: body.final_score, rationale: body.rationale, reviewer_sub: 'demo-session', reviewed_at: new Date().toISOString() } } : null);
       }} />}
     </> : <div className="loading-card">Loading the public fixture…</div>}
   </main>;
@@ -180,13 +178,7 @@ const StateBadge = memo(function StateBadge({ state, confidence }: { state: stri
   return <div className={`state ${className}`}><strong><span className="badge-icon">{icon}</span> {state.replaceAll('_', ' ')}</strong>{confidence !== undefined && <small>{Math.round(confidence * 100)}% confidence</small>}</div>;
 });
 
-function Workspace({ onBack }: { onBack: () => void }) {
-  const [isGuest, setIsGuest] = useState(false);
-
-  if (isGuest) {
-    return <AuthenticatedWorkspace userEmail="Guest (Free Trial Mode)" onBack={onBack} onSignOut={() => setIsGuest(false)} />;
-  }
-
+function Workspace({ onBack, onDemo }: { onBack: () => void; onDemo: () => void }) {
   return <main className="content">
     <div className="workspace-nav">
       <button className="back" onClick={onBack}>← Back to overview</button>
@@ -195,16 +187,16 @@ function Workspace({ onBack }: { onBack: () => void }) {
       <div className="eyebrow">FREE TRIAL & SECURE WORKSPACE</div>
       <h2>Start your Bid Evaluation</h2>
       <p style={{ fontSize: 15, color: '#69736b', marginBottom: 24, lineHeight: 1.5 }}>
-        Test all core features instantly in <strong>Free Trial Mode</strong> (no sign-up required), or log in with your verified organization account.
+        Explore a basic synthetic evaluation and review flow without signing up, or create an account to upload real documents and run evaluations.
       </p>
       <button
         className="button-primary"
         style={{ width: '100%', padding: '14px 20px', fontSize: 15, marginBottom: 20, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
-        onClick={() => setIsGuest(true)}
+        onClick={onDemo}
       >
-        <span>⚡</span> Launch Instant Free Trial (No Sign-Up)
+        <span>⚡</span> Try the interactive demo (no sign-up)
       </button>
-      <div style={{ margin: '20px 0 16px', color: '#879289', font: '11px DM Mono', letterSpacing: '0.08em' }}>OR SIGN IN WITH COGNITO</div>
+      <div style={{ margin: '20px 0 16px', color: '#879289', font: '11px DM Mono', letterSpacing: '0.08em' }}>CREATE AN ACCOUNT OR SIGN IN</div>
       <Suspense fallback={<div className="loading-card">Loading auth provider…</div>}>
         <Authenticator loginMechanisms={['email']}>
           {({ user, signOut }) => <AuthenticatedWorkspace userEmail={user?.signInDetails?.loginId ?? 'authenticated user'} onBack={onBack} onSignOut={signOut} />}
@@ -385,7 +377,7 @@ function pointerLabel(pointer: ResultDto['evidence_claims'][number]['source_poin
   return `${pointer.source_pointer_id} · ${pointer.document_name} (${pointer.document_type}) · ${locations}`;
 }
 
-function ResultPanel({ result, onClose, onReview }: { result: ResultDto; onClose: () => void; onReview: (body: { action: string; final_state?: string; final_score?: number; rationale?: string }) => void }) {
+function ResultPanel({ result, onClose, onReview, simulation = false }: { result: ResultDto; onClose: () => void; onReview: (body: { action: string; final_state?: string; final_score?: number; rationale?: string }) => void; simulation?: boolean }) {
   const [action, setAction] = useState('ACCEPT');
   const [finalState, setFinalState] = useState(result.state);
   const [score, setScore] = useState(String(result.suggested_score ?? 0));
@@ -402,5 +394,44 @@ function ResultPanel({ result, onClose, onReview }: { result: ResultDto; onClose
   const requiresDecision = action === 'OVERRIDE';
   const claims = new Map(result.evidence_claims.map((claim, index) => [claim.evidence_claim_id ?? `claim-${index}`, claim]));
   const finalReview = result.human_review?.action === 'OVERRIDE' ? `${result.human_review.final_state ?? 'state not supplied'} · score ${result.human_review.final_score ?? 'not supplied'}` : result.human_review?.action === 'ACCEPT' ? 'ACCEPT system suggestion' : result.human_review?.action ?? 'No human decision recorded';
-  return <div className="result-overlay" role="dialog" aria-modal="true"><aside className="result-panel"><div className="panel-header"><div><div className="eyebrow">RESULT DETAIL · {result.specialist ?? 'SPECIALIST'}</div><h2>{result.vendor_id} / {result.proposal_id}</h2></div><button className="button-quiet" onClick={onClose} aria-label="Close result detail">×</button></div><div className="decision-trace"><div><span>SYSTEM SUGGESTION</span><strong><StateBadge state={result.state} /> {result.suggested_score ?? '—'} / {result.max_score}</strong></div><div><span>HUMAN DECISION</span><strong>{finalReview}</strong></div>{result.human_review?.rationale && <div><span>RATIONALE</span><strong>{result.human_review.rationale}</strong></div>}</div><p className="result-rationale">{result.rationale}</p>{result.deterministic_result && <div className="evidence-block"><strong>Deterministic authority</strong><p>{result.deterministic_result.tool} · {result.deterministic_result.authoritative_state ?? 'calculated'}</p></div>}<div className="evidence-block"><strong>Source evidence</strong>{result.evidence_claims.length ? result.evidence_claims.map((claim, index) => <div className="claim" key={`${claim.source_pointer.source_pointer_id}-${index}`}><span>{claim.relation}</span><p>Evidence excerpt / claim: {claim.claim_text}</p><small>{pointerLabel(claim.source_pointer)}</small></div>) : <p>INSUFFICIENT_EVIDENCE — no resolvable source claim.</p>}</div>{result.conflict_pairs.length > 0 && <div className="conflict-box"><strong>Conflict preserved</strong><p>{result.conflict_pairs.length} conflict pair(s) require reviewer attention.</p>{result.conflict_pairs.map((pair, index) => { const supporting = claims.get(pair.supporting_claim_id); const contradicting = claims.get(pair.contradicting_claim_id); return <div className="conflict-pair" key={`${pair.supporting_claim_id}-${pair.contradicting_claim_id}-${index}`}><div><span>Supporting evidence</span><p>Evidence excerpt / claim: {supporting?.claim_text ?? `Claim ${pair.supporting_claim_id} is not present in this response.`}</p>{supporting && <small>{pointerLabel(supporting.source_pointer)}</small>}</div><div><span>Contradicting evidence</span><p>Evidence excerpt / claim: {contradicting?.claim_text ?? `Claim ${pair.contradicting_claim_id} is not present in this response.`}</p>{contradicting && <small>{pointerLabel(contradicting.source_pointer)}</small>}</div><small className="conflict-meta">{pair.conflict_type} · {pair.resolution_status}</small></div>; })}</div>}<div className="review-box"><div className="eyebrow">HUMAN REVIEW</div><select value={action} onChange={(event) => setAction(event.target.value)}><option value="ACCEPT">ACCEPT system suggestion</option><option value="OVERRIDE">OVERRIDE with rationale</option><option value="REQUEST_FOLLOWUP">REQUEST FOLLOW-UP</option></select>{requiresDecision && <><select value={finalState} onChange={(event) => setFinalState(event.target.value)}>{['SATISFIED', 'PARTIALLY_SATISFIED', 'NOT_SATISFIED', 'CONFLICTING_EVIDENCE', 'INSUFFICIENT_EVIDENCE'].map((state) => <option key={state}>{state}</option>)}</select><input type="number" min="0" value={score} onChange={(event) => setScore(event.target.value)} placeholder="Final score" /><textarea value={rationale} onChange={(event) => setRationale(event.target.value)} placeholder="Override rationale is required" /> </>}<button className="button-primary" disabled={requiresDecision && !rationale.trim()} onClick={() => onReview({ action, ...(requiresDecision ? { final_state: finalState, final_score: Number(score), rationale } : {}) })}>Record review</button>{result.human_review && <small className="review-record">Latest review: {result.human_review.action} · {result.human_review.reviewed_at}</small>}</div></aside></div>;
+  return <div className="result-overlay" role="dialog" aria-modal="true">
+    <aside className="result-panel">
+      <div className="panel-header">
+        <div><div className="eyebrow">{simulation ? 'DEMO SIMULATION · LOCAL ONLY' : `RESULT DETAIL · ${result.specialist ?? 'SPECIALIST'}`}</div><h2>{result.vendor_id} / {result.proposal_id}</h2></div>
+        <button className="button-quiet" onClick={onClose} aria-label="Close result detail">×</button>
+      </div>
+      <div className="decision-trace">
+        <div><span>{simulation ? 'SAMPLE SCENARIO' : 'SYSTEM SUGGESTION'}</span><strong><StateBadge state={result.state} /> {result.suggested_score ?? '—'} / {result.max_score}</strong></div>
+        <div><span>{simulation ? 'LOCAL DEMO REVIEW' : 'HUMAN DECISION'}</span><strong>{finalReview}</strong></div>
+        {result.human_review?.rationale && <div><span>RATIONALE</span><strong>{result.human_review.rationale}</strong></div>}
+      </div>
+      <p className="result-rationale">{result.rationale}</p>
+      {result.deterministic_result && <div className="evidence-block"><strong>Deterministic authority</strong><p>{result.deterministic_result.tool} · {result.deterministic_result.authoritative_state ?? 'calculated'}</p></div>}
+      <div className="evidence-block">
+        <strong>{simulation ? 'Synthetic fixture references (not real source documents)' : 'Source evidence'}</strong>
+        {result.evidence_claims.length ? result.evidence_claims.map((claim, index) => <div className="claim" key={`${claim.source_pointer.source_pointer_id}-${index}`}><span>{claim.relation}</span><p>Evidence excerpt / claim: {claim.claim_text}</p><small>{pointerLabel(claim.source_pointer)}</small></div>) : <p>INSUFFICIENT_EVIDENCE — no resolvable source claim.</p>}
+      </div>
+      {result.conflict_pairs.length > 0 && <div className="conflict-box">
+        <strong>{simulation ? 'Sample scenario conflict' : 'Conflict preserved'}</strong>
+        <p>{result.conflict_pairs.length} conflict pair(s) {simulation ? 'are included for demonstration only.' : 'require reviewer attention.'}</p>
+        {result.conflict_pairs.map((pair, index) => {
+          const supporting = claims.get(pair.supporting_claim_id);
+          const contradicting = claims.get(pair.contradicting_claim_id);
+          return <div className="conflict-pair" key={`${pair.supporting_claim_id}-${pair.contradicting_claim_id}-${index}`}>
+            <div><span>Supporting evidence</span><p>Evidence excerpt / claim: {supporting?.claim_text ?? `Claim ${pair.supporting_claim_id} is not present in this response.`}</p>{supporting && <small>{pointerLabel(supporting.source_pointer)}</small>}</div>
+            <div><span>Contradicting evidence</span><p>Evidence excerpt / claim: {contradicting?.claim_text ?? `Claim ${pair.contradicting_claim_id} is not present in this response.`}</p>{contradicting && <small>{pointerLabel(contradicting.source_pointer)}</small>}</div>
+            <small className="conflict-meta">{pair.conflict_type} · {pair.resolution_status}</small>
+          </div>;
+        })}
+      </div>}
+      <div className="review-box">
+        <div className="eyebrow">{simulation ? 'SIMULATED HUMAN REVIEW · NOT SAVED' : 'HUMAN REVIEW'}</div>
+        <select value={action} onChange={(event) => setAction(event.target.value)}><option value="ACCEPT">ACCEPT system suggestion</option><option value="OVERRIDE">OVERRIDE with rationale</option><option value="REQUEST_FOLLOWUP">REQUEST FOLLOW-UP</option></select>
+        {requiresDecision && <><select value={finalState} onChange={(event) => setFinalState(event.target.value)}>{['SATISFIED', 'PARTIALLY_SATISFIED', 'NOT_SATISFIED', 'CONFLICTING_EVIDENCE', 'INSUFFICIENT_EVIDENCE'].map((state) => <option key={state}>{state}</option>)}</select><input type="number" min="0" value={score} onChange={(event) => setScore(event.target.value)} placeholder="Final score" /><textarea value={rationale} onChange={(event) => setRationale(event.target.value)} placeholder="Override rationale is required" /></>}
+        <button className="button-primary" disabled={requiresDecision && !rationale.trim()} onClick={() => onReview({ action, ...(requiresDecision ? { final_state: finalState, final_score: Number(score), rationale } : {}) })}>{simulation ? 'Apply locally' : 'Record review'}</button>
+        {simulation && <small>Demo changes are temporary and reset when you leave or refresh this page.</small>}
+        {result.human_review && <small className="review-record">{simulation ? 'Demo review' : 'Latest review'}: {result.human_review.action} · {result.human_review.reviewed_at}</small>}
+      </div>
+    </aside>
+  </div>;
 }

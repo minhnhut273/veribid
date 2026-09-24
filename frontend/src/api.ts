@@ -30,14 +30,11 @@ const baseUrl = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.repla
 async function request<T>(path: string, init?: RequestInit, authenticated = false): Promise<T> {
   let authorization: Record<string, string> = {};
   if (authenticated) {
-    try {
-      const { fetchAuthSession } = await import('aws-amplify/auth');
-      const session = await fetchAuthSession();
-      const token = session.tokens?.accessToken?.toString();
-      if (token) authorization = { authorization: `Bearer ${token}` };
-    } catch {
-      /* Guest trial fallback */
-    }
+    const { fetchAuthSession } = await import('aws-amplify/auth');
+    const session = await fetchAuthSession();
+    const token = session.tokens?.accessToken?.toString();
+    if (!token) throw new Error('Sign in is required for this workspace action.');
+    authorization = { authorization: `Bearer ${token}` };
   }
   const response = await fetch(`${baseUrl}${path}`, {
     ...init,

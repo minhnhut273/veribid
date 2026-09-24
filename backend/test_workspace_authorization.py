@@ -87,20 +87,41 @@ class WorkspaceAuthorizationTests(unittest.TestCase):
         self.assertEqual(response["statusCode"], 403)
         self.assertEqual(json.loads(response["body"])["error"]["code"], "FORBIDDEN")
 
-    def test_pre_token_trigger_emits_workspace_claim(self) -> None:
-        token_event = {"request": {"userAttributes": {"custom:workspace_id": "workspace-a"}}, "response": {}}
+    def test_pre_token_trigger_emits_workspace_claim_and_preserves_existing_groups(self) -> None:
+        token_event = {
+            "request": {
+                "userAttributes": {"sub": "user-1", "custom:workspace_id": "workspace-a"},
+                "groupConfiguration": {
+                    "groupsToOverride": ["Auditor"],
+                    "iamRolesToOverride": ["arn:aws:iam::123456789012:role/auditor"],
+                    "preferredRole": "arn:aws:iam::123456789012:role/auditor",
+                },
+            },
+            "response": {},
+        }
         result = pre_token_handler(token_event, None)
-        self.assertEqual(
-            result["response"]["claimsAndScopeOverrideDetails"]["accessTokenGeneration"]["claimsToAddOrOverride"]["workspace_id"],
-            "workspace-a",
-        )
+        details = result["response"]["claimsAndScopeOverrideDetails"]
+        self.assertEqual(details["accessTokenGeneration"]["claimsToAddOrOverride"]["workspace_id"], "workspace-a")
+        self.assertEqual(details["idTokenGeneration"]["claimsToAddOrOverride"]["workspace_id"], "workspace-a")
+        self.assertNotIn("cognito:groups", details["accessTokenGeneration"]["claimsToAddOrOverride"])
+        self.assertNotIn("groupOverrideDetails", details)
+        self.assertEqual(token_event["request"]["groupConfiguration"]["groupsToOverride"], ["Auditor"])
 
     def test_self_signup_user_without_explicit_workspace_id_can_create_evaluations(self) -> None:
-        token_event = {"userName": "newuser-123", "request": {"userAttributes": {"sub": "newuser-123"}}, "response": {}}
+        token_event = {
+            "userName": "a-different-login-alias@example.com",
+            "request": {
+                "userAttributes": {"sub": "123e4567-e89b-12d3-a456-426614174000"},
+                "groupConfiguration": {"groupsToOverride": [], "iamRolesToOverride": [], "preferredRole": None},
+            },
+            "response": {},
+        }
         result = pre_token_handler(token_event, None)
-        claims = result["response"]["claimsAndScopeOverrideDetails"]["accessTokenGeneration"]["claimsToAddOrOverride"]
-        self.assertEqual(claims["workspace_id"], "WS_newuser_123")
-        self.assertEqual(claims["cognito:groups"], "TenantAdmin")
+        details = result["response"]["claimsAndScopeOverrideDetails"]
+        claims = details["accessTokenGeneration"]["claimsToAddOrOverride"]
+        self.assertEqual(claims["workspace_id"], "WS_123e4567_e89b_12d3_a456_426614174000")
+        self.assertEqual(details["groupOverrideDetails"]["groupsToOverride"], ["TenantAdmin"])
+        self.assertNotIn("cognito:groups", claims)
 
         self_signup_event = {
             "rawPath": "/api/v1/evaluations",
@@ -111,7 +132,9 @@ class WorkspaceAuthorizationTests(unittest.TestCase):
                 "requestId": "self-signup-test",
                 "http": {"method": "POST"},
                 "authorizer": {"jwt": {"claims": {
-                    "sub": "user-selfsignup-999",
+                    "sub": "123e4567-e89b-12d3-a456-426614174000",
+                    **claims,
+                    "cognito:groups": details["groupOverrideDetails"]["groupsToOverride"],
                 }}},
             },
         }
@@ -119,7 +142,51 @@ class WorkspaceAuthorizationTests(unittest.TestCase):
         self.assertEqual(response["statusCode"], 201)
         evaluation_id = json.loads(response["body"])["data"]["evaluation_id"]
         stored = self.table.items[(f"EVAL#{evaluation_id}", "META")]
-        self.assertEqual(stored["workspace_id"], "WS_user_selfsignup_999")
+        self.assertEqual(stored["workspace_id"], claims["workspace_id"])
+
+    def test_new_account_with_existing_auditor_group_is_not_promoted(self) -> None:
+        token_event = {
+            "request": {
+                "userAttributes": {"sub": "auditor-sub"},
+                "groupConfiguration": {"groupsToOverride": ["Auditor"]},
+            },
+            "response": {},
+        }
+        result = pre_token_handler(token_event, None)
+        self.assertNotIn("groupOverrideDetails", result["response"]["claimsAndScopeOverrideDetails"])
+
+        auditor_event = {
+            "rawPath": "/api/v1/evaluations",
+            "body": json.dumps({"name": "Should remain read-only"}),
+            "headers": {},
+            "pathParameters": {},
+            "requestContext": {
+                "requestId": "auditor-self-signup-test",
+                "http": {"method": "POST"},
+                "authorizer": {"jwt": {"claims": {
+                    "sub": "auditor-sub",
+                    "workspace_id": "WS_auditor_sub",
+                    "cognito:groups": ["Auditor"],
+                }}},
+            },
+        }
+        response = api.handler(auditor_event, None)
+        self.assertEqual(response["statusCode"], 403)
+
+    def test_authenticated_user_without_a_cognito_group_fails_closed(self) -> None:
+        no_group_event = {
+            "rawPath": "/api/v1/evaluations",
+            "body": json.dumps({"name": "No role"}),
+            "headers": {},
+            "pathParameters": {},
+            "requestContext": {
+                "requestId": "missing-role-test",
+                "http": {"method": "POST"},
+                "authorizer": {"jwt": {"claims": {"sub": "user-1", "workspace_id": "workspace-a"}}},
+            },
+        }
+        response = api.handler(no_group_event, None)
+        self.assertEqual(response["statusCode"], 403)
 
 
 if __name__ == "__main__":
