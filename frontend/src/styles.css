@@ -10,3 +10,31 @@ footer { margin-top: auto; border-top: 1px solid #dfe4d8; padding: 22px clamp(24
 .badge-icon { display: inline-block; font-weight: 700; margin-right: 4px; }
 .result-overlay { backdrop-filter: blur(2px); transition: backdrop-filter 0.2s ease; }
 
+/* Load Amplify's large component stylesheet with the lazy Authenticator, not on the public landing page. */
+.content.workspace-entry { padding: 24px clamp(16px, 4vw, 48px) 48px; }
+.workspace-auth-card { max-width: 520px; margin: 12px auto 32px; padding: 24px 30px; text-align: left; border-radius: 16px; }
+.workspace-auth-intro { text-align: left; }
+.workspace-auth-intro h2 { margin: 8px 0 6px; font: 600 27px/1.15 'Space Grotesk', sans-serif; letter-spacing: -.035em; color: #19231f; }
+.workspace-auth-intro p { margin: 0 0 12px; color: #69736b; font-size: 14px; line-height: 1.45; }
+.authenticator-shell { width: 100%; text-align: left; --amplify-colors-primary-10: #e8efe7; --amplify-colors-primary-80: #1e5042; --amplify-colors-primary-90: #193f34; --amplify-colors-primary-100: #122f27; --amplify-colors-font-primary: #19231f; --amplify-colors-font-secondary: #69736b; --amplify-colors-border-primary: #d5ddd2; --amplify-components-authenticator-router-background-color: #fff; --amplify-components-authenticator-router-border-color: transparent; --amplify-components-authenticator-router-border-width: 0; --amplify-components-authenticator-router-box-shadow: none; }
+.authenticator-shell .amplify-button { min-height: 44px; border-radius: 8px; font-weight: 600; }
+.authenticator-shell .amplify-button--primary { background: #1e5042; border-color: #1e5042; color: #fff; }
+.authenticator-shell .amplify-button--primary:hover { background: #193f34; border-color: #193f34; }
+.authenticator-shell .amplify-tabs__item { min-height: 42px; color: #69736b; font: 600 14px 'DM Sans', sans-serif; }
+.authenticator-shell .amplify-tabs__item--active { color: #1e5042; border-color: #1e5042; }
+.authenticator-shell .amplify-input { min-height: 46px; border-radius: 8px; }
+.authenticator-shell .amplify-label { color: #51625a; font: 600 13px 'DM Sans', sans-serif; }
+.authenticator-shell .amplify-tabs__panel { padding-top: 10px; }
+.authenticator-shell a { color: #1e5042; }
+.workspace-demo-link { display: block; margin: 14px auto 0; padding: 8px 12px; border: 0; background: transparent; color: #1e5042; font: 600 13px 'DM Sans', sans-serif; cursor: pointer; }
+.workspace-demo-link:hover { text-decoration: underline; }
+.workspace-demo-link:focus-visible { outline: 2px solid #1e5042; outline-offset: 2px; border-radius: 4px; }
+.toast-workspace { position: static; width: min(520px, calc(100% - 32px)); margin: 0 auto 20px; border-radius: 8px; }
+.workspace-entry:has(.workspace) { padding: 0; }
+.workspace-auth-card:has(.workspace) { max-width: none; margin: 0; padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+.workspace-auth-card:has(.workspace) > .workspace-auth-intro { display: none; }
+@media (max-width: 640px) {
+  .content.workspace-entry { padding: 12px 12px 28px; }
+  .workspace-auth-card { margin: 0 auto 20px; padding: 20px 16px; border-radius: 12px; }
+  .workspace-auth-intro h2 { font-size: 24px; }
+}

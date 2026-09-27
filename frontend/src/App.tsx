@@ -2,7 +2,10 @@ import { lazy, memo, Suspense, useEffect, useMemo, useRef, useState } from 'reac
 import { api, DemoDto, DocumentDto, EvaluationDto, MatrixDto, RequirementDto, ResultDto, RunDto } from './api';
 
 const Authenticator = lazy(async () => {
-  const module = await import('@aws-amplify/ui-react');
+  const [module] = await Promise.all([
+    import('@aws-amplify/ui-react'),
+    import('@aws-amplify/ui-react/styles.css'),
+  ]);
   return { default: module.Authenticator };
 });
 
@@ -54,7 +57,7 @@ export function App() {
     {page === 'home' && <Landing health={health} onDemo={() => navigate('demo')} onApp={() => navigate('app')} />}
     {page === 'demo' && <Demo demo={demo} onBack={() => navigate('home')} />}
     {page === 'app' && <Workspace onBack={() => navigate('home')} onDemo={() => navigate('demo')} />}
-    {error && <div className="toast" role="status">{error}</div>}
+    {error && <div className={`toast${page === 'app' ? ' toast-workspace' : ''}`} role="status">{error}</div>}
     <footer><span>Evidence first. Decisions remain human.</span><span>API {health?.data.status ?? 'checking'}</span></footer>
   </div>;
 }
@@ -179,29 +182,21 @@ const StateBadge = memo(function StateBadge({ state, confidence }: { state: stri
 });
 
 function Workspace({ onBack, onDemo }: { onBack: () => void; onDemo: () => void }) {
-  return <main className="content">
-    <div className="workspace-nav">
-      <button className="back" onClick={onBack}>← Back to overview</button>
-    </div>
-    <div className="workspace-card" style={{ maxWidth: 560, margin: '10px auto 40px' }}>
-      <div className="eyebrow">FREE TRIAL & SECURE WORKSPACE</div>
-      <h2>Start your Bid Evaluation</h2>
-      <p style={{ fontSize: 15, color: '#69736b', marginBottom: 24, lineHeight: 1.5 }}>
-        Explore a basic synthetic evaluation and review flow without signing up, or create an account to upload real documents and run evaluations.
-      </p>
-      <button
-        className="button-primary"
-        style={{ width: '100%', padding: '14px 20px', fontSize: 15, marginBottom: 20, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
-        onClick={onDemo}
-      >
-        <span>⚡</span> Try the interactive demo (no sign-up)
-      </button>
-      <div style={{ margin: '20px 0 16px', color: '#879289', font: '11px DM Mono', letterSpacing: '0.08em' }}>CREATE AN ACCOUNT OR SIGN IN</div>
-      <Suspense fallback={<div className="loading-card">Loading auth provider…</div>}>
-        <Authenticator loginMechanisms={['email']}>
-          {({ user, signOut }) => <AuthenticatedWorkspace userEmail={user?.signInDetails?.loginId ?? 'authenticated user'} onBack={onBack} onSignOut={signOut} />}
-        </Authenticator>
-      </Suspense>
+  return <main className="content workspace-entry">
+    <div className="workspace-card workspace-auth-card">
+      <div className="workspace-auth-intro">
+        <div className="eyebrow">SECURE WORKSPACE</div>
+        <h2>Sign in to VeriBid</h2>
+        <p>Create an account or sign in to review evidence-backed bids.</p>
+      </div>
+      <div className="authenticator-shell">
+        <Suspense fallback={<div className="loading-card">Loading auth provider…</div>}>
+          <Authenticator loginMechanisms={['email']}>
+            {({ user, signOut }) => <AuthenticatedWorkspace userEmail={user?.signInDetails?.loginId ?? 'authenticated user'} onBack={onBack} onSignOut={signOut} />}
+          </Authenticator>
+        </Suspense>
+      </div>
+      <button className="workspace-demo-link" onClick={onDemo}>Try the interactive demo (no sign-up)</button>
     </div>
   </main>;
 }
@@ -346,7 +341,7 @@ function AuthenticatedWorkspace({ userEmail, onBack, onSignOut }: { userEmail: s
   };
 
   const vendorCount = useMemo(() => new Set(documents.map((item) => item.vendor_id).filter(Boolean)).size, [documents]);
-  return <main className="content workspace">
+  return <div className="content workspace">
     <div className="workspace-nav"><button className="back" onClick={onBack}>← Back to overview</button><button className="button-quiet" onClick={() => onSignOut?.()}>Sign out</button></div>
     <div className="eyebrow">EVALUATION WORKSPACE · {userEmail}</div><h1>Bring the evidence together.</h1><p className="lede">Create a private evaluation workspace, upload buyer and vendor evidence, then review every result before exporting.</p>
     {!evaluation ? <div className="workspace-card"><div className="upload-icon">+</div><h2>Start an evaluation workspace</h2><label htmlFor="evaluation-name">Evaluation name</label><input id="evaluation-name" value={name} onChange={(event) => setName(event.target.value)} /><button className="button-primary" onClick={() => void create()} disabled={busy !== null}>Create evaluation</button>{error && <div className="form-error" role="alert">{error}</div>}</div> : <>
@@ -358,7 +353,7 @@ function AuthenticatedWorkspace({ userEmail, onBack, onSignOut }: { userEmail: s
       {matrix && <EvidenceMatrix matrix={matrix} onOpenResult={(resultId) => void openResult(resultId)} onExport={(format) => void exportReport(format)} />}
       {selectedResult && <ResultPanel result={selectedResult} onClose={() => setSelectedResult(null)} onReview={(body) => void saveReview(body)} />}
     </>}
-  </main>;
+  </div>;
 }
 
 function EvidenceMatrix({ matrix, onOpenResult, onExport }: { matrix: MatrixDto; onOpenResult: (resultId: string) => void; onExport: (format: 'MARKDOWN' | 'PDF') => void }) {
