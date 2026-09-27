@@ -7,7 +7,27 @@ frontend are deployed, a fresh authenticated synthetic replay passed, and the
 Builder Center draft is populated and preview-verified. The final Publish,
 originality confirmation, and optional real screenshot uploads remain manual.
 
-Last verified: 2026-09-23
+Last verified: 2026-09-27
+
+## 2026-09-27 Authenticated workspace follow-up
+
+- The deployed API Gateway JWT authorizer presented `cognito:groups` as a
+  serialized bracketed string. The API now normalizes this shape alongside
+  native arrays and comma-delimited values; the frontend retries a write once
+  after a role-related `403` using a refreshed Cognito access token.
+- At the user's request, their read-only `Auditor` membership was changed to
+  `SourcingLead`; `TenantAdmin` was not granted. Cognito refresh telemetry and
+  API request diagnostics confirmed the write role without logging email,
+  tokens, or group names.
+- Amplify manual deployment job 14 succeeded. The live authenticated browser
+  created `Cloud platform procurement` in `DRAFT`, and the workspace UI loaded
+  its evaluation, requirements, and document state. No files were uploaded.
+- The Lambda code packages were updated directly after CDK synth ran out of
+  memory and an accurate CDK change set included unrelated user-pool, authorizer,
+  and API-permission modifications. CloudFormation was not allowed to execute
+  that change set. The stack still reports `UPDATE_COMPLETE`, but its recorded
+  Lambda asset references may not match the live code; reconcile this drift with
+  a successful synth/diff before the next CDK deployment.
 
 The repository-local agent environment is now switched to implementation and
 shipping mode. The first deployed vertical slice includes CDK infrastructure,

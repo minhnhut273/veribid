@@ -12,7 +12,7 @@ Ship the contract-first VeriBid MVP as a real AWS-hosted application with a publ
 |---|---|---|---|
 | M0 | Repository and infrastructure foundation | GitHub remote, CI skeleton, IaC project, implementation ledger | PASS — GitHub + CDK foundation |
 | M1 | Public frontend, API health, deployment foundation | HTTPS Amplify URL and API health route | PASS — live Amplify + API health/demo |
-| M2 | Cognito and Evaluation Workspace | Authenticated workspace creation and persistence | PASS — live synthetic Cognito workspace creation and owner-scoped persistence |
+| M2 | Cognito and Evaluation Workspace | Authenticated workspace creation and persistence | PASS — live browser creation verified 2026-09-27; API Gateway group-claim normalization and role refresh/retry fixed |
 | M3 | Two-phase upload and ingestion | Private S3 upload, complete-upload verification, PDF/DOCX/XLSX metadata | PASS — live DOCX uploads, S3 verification and worker ingestion succeeded |
 | M4 | Requirement extraction and SourcePointers | Atomic typed requirements with buyer provenance | PASS — live typed requirements with buyer SourcePointers |
 | M5 | Vendor-scoped retrieval | Isolation tests for `vendor_id + proposal_id` | PASS — parser/domain scope guards |
@@ -45,5 +45,8 @@ Sprint 1 is now the workspace authorization slice:
 2. Require the token's `workspace_id` claim in protected API requests and persist it on evaluation aggregates and derived DynamoDB records. Workspace scope, not `owner_sub`, controls tenant visibility; `owner_sub` remains actor/audit metadata.
 3. Allow `TenantAdmin` and `SourcingLead` to mutate evaluation workflows; keep `Auditor` read-only within its workspace.
 4. Run the workspace authorization test script and CDK build/synth checks.
+5. Normalize the API Gateway `cognito:groups` claim when it arrives as a serialized bracketed string, and retry a write once after a stale-role `403` using a refreshed access token.
+
+Live follow-up on 2026-09-27: the API Gateway authorizer supplied `cognito:groups` as a serialized bracketed string. After the API parser fix and a user-authorized switch from `Auditor` to the least-privileged write role `SourcingLead`, the production browser created the `Cloud platform procurement` evaluation and loaded it as `DRAFT`.
 
 Definition of Done: a synthesized stack contains all three groups and the workspace attribute; same-workspace users can read shared evaluation state; a different workspace receives `404`; an Auditor mutation receives `403`; and existing append-only review/audit semantics remain intact.

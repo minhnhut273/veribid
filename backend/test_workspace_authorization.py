@@ -87,6 +87,18 @@ class WorkspaceAuthorizationTests(unittest.TestCase):
         self.assertEqual(response["statusCode"], 403)
         self.assertEqual(json.loads(response["body"])["error"]["code"], "FORBIDDEN")
 
+    def test_serialized_api_gateway_group_array_grants_write_role(self) -> None:
+        for claim in ('["SourcingLead"]', "['SourcingLead']"):
+            with self.subTest(claim=claim):
+                request = event(
+                    "/api/v1/evaluations", "POST", "workspace-a", ["SourcingLead"], {"name": "RFP"}
+                )
+                request["requestContext"]["authorizer"]["jwt"]["claims"]["cognito:groups"] = claim
+
+                response = api.handler(request, None)
+
+                self.assertEqual(response["statusCode"], 201)
+
     def test_pre_token_trigger_emits_workspace_claim_and_preserves_existing_groups(self) -> None:
         token_event = {
             "request": {

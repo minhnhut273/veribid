@@ -284,9 +284,19 @@ def _workspace_id(event: dict[str, Any]) -> str | None:
 def _groups(event: dict[str, Any]) -> set[str]:
     value = _claims(event).get("cognito:groups", [])
     if isinstance(value, str):
-        groups = {item.strip() for item in value.split(",") if item.strip()}
-    elif isinstance(value, list):
-        groups = {str(item).strip() for item in value if str(item).strip()}
+        try:
+            decoded = json.loads(value)
+        except json.JSONDecodeError:
+            decoded = None
+        if isinstance(decoded, list):
+            value = decoded
+        else:
+            normalized = value.strip()
+            if normalized.startswith("[") and normalized.endswith("]"):
+                normalized = normalized[1:-1]
+            value = normalized.split(",")
+    if isinstance(value, list):
+        groups = {str(item).strip().strip("'\"") for item in value if str(item).strip().strip("'\"")}
     else:
         groups = set()
     return groups
@@ -601,14 +611,19 @@ def _get_export(event: dict[str, Any], evaluation_id: str, export_id: str) -> di
 def handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
     path = event.get("rawPath") or "/api/v1/health"
     method = (event.get("requestContext", {}).get("http", {}).get("method") or event.get("httpMethod") or "GET").upper()
+    raw_group_claim = _claims(event).get("cognito:groups")
     groups = _groups(event)
     print(json.dumps({
         "request_id": _request_id(event),
         "method": method,
         "path": path,
         "owner_present": bool(_owner(event)),
+        "group_claim_type": type(raw_group_claim).__name__,
+        "group_claim_json_array": isinstance(raw_group_claim, str) and raw_group_claim.lstrip().startswith("["),
         "group_count": len(groups),
         "write_role_present": bool(groups & WRITE_ROLES),
+        "tenant_admin_claim_present": "TenantAdmin" in groups,
+        "sourcing_lead_claim_present": "SourcingLead" in groups,
     }, separators=(",", ":")))
     if path == "/api/v1/health" and method == "GET":
         return _success({"service": os.getenv("SERVICE_NAME", "veribid-api"), "version": os.getenv("SERVICE_VERSION", "unknown"), "status": "ok", "timestamp": _now()}, event)
