@@ -31,8 +31,28 @@ async function request<T>(path: string, init?: RequestInit, authenticated = fals
   let authorization: Record<string, string> = {};
   if (authenticated) {
     const { fetchAuthSession } = await import('aws-amplify/auth');
-    const session = await fetchAuthSession();
-    const token = session.tokens?.accessToken?.toString();
+    let session = await fetchAuthSession();
+    let accessToken = session.tokens?.accessToken;
+    const payload = accessToken?.payload as Record<string, unknown> | undefined;
+    const workspaceId = payload?.workspace_id ?? payload?.['custom:workspace_id'];
+    const method = (init?.method ?? 'GET').toUpperCase();
+    const requiresWriteRole = !['GET', 'HEAD', 'OPTIONS'].includes(method);
+    const rawGroups = payload?.['cognito:groups'];
+    const groups = Array.isArray(rawGroups)
+      ? rawGroups
+      : typeof rawGroups === 'string'
+        ? rawGroups.split(',')
+        : [];
+    const canWrite = groups.some((group) => group === 'TenantAdmin' || group === 'SourcingLead');
+
+    // Cognito JWTs keep claims from the time they were issued. Refresh once when
+    // a new pre-token trigger should have supplied the workspace or write role.
+    if (!workspaceId || (requiresWriteRole && !canWrite)) {
+      session = await fetchAuthSession({ forceRefresh: true });
+      accessToken = session.tokens?.accessToken;
+    }
+
+    const token = accessToken?.toString();
     if (!token) throw new Error('Sign in is required for this workspace action.');
     authorization = { authorization: `Bearer ${token}` };
   }

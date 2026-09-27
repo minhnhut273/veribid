@@ -18,8 +18,14 @@ def handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
             raise ValueError("Cognito pre-token event is missing the immutable user sub")
         workspace_id = _personal_workspace_id(str(subject))
 
-    response = event.setdefault("response", {})
-    overrides = response.setdefault("claimsAndScopeOverrideDetails", {})
+    response = event.get("response")
+    if not isinstance(response, dict):
+        response = {}
+        event["response"] = response
+    overrides = response.get("claimsAndScopeOverrideDetails")
+    if not isinstance(overrides, dict):
+        overrides = {}
+        response["claimsAndScopeOverrideDetails"] = overrides
     claim_overrides = {"workspace_id": str(workspace_id)}
     overrides["accessTokenGeneration"] = {
         "claimsToAddOrOverride": claim_overrides,

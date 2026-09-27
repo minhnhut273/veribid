@@ -107,6 +107,25 @@ class WorkspaceAuthorizationTests(unittest.TestCase):
         self.assertNotIn("groupOverrideDetails", details)
         self.assertEqual(token_event["request"]["groupConfiguration"]["groupsToOverride"], ["Auditor"])
 
+    def test_pre_token_refresh_handles_null_claim_override_details(self) -> None:
+        token_event = {
+            "triggerSource": "TokenGeneration_RefreshTokens",
+            "request": {
+                "userAttributes": {"sub": "user-1"},
+                "groupConfiguration": {"groupsToOverride": []},
+            },
+            "response": {"claimsAndScopeOverrideDetails": None},
+        }
+
+        result = pre_token_handler(token_event, None)
+
+        details = result["response"]["claimsAndScopeOverrideDetails"]
+        self.assertEqual(
+            details["accessTokenGeneration"]["claimsToAddOrOverride"]["workspace_id"],
+            "WS_user_1",
+        )
+        self.assertEqual(details["groupOverrideDetails"]["groupsToOverride"], ["TenantAdmin"])
+
     def test_self_signup_user_without_explicit_workspace_id_can_create_evaluations(self) -> None:
         token_event = {
             "userName": "a-different-login-alias@example.com",
