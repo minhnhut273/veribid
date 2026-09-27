@@ -61,4 +61,18 @@ describe('landing page', () => {
     expect(await screen.findByText(/Demo review: OVERRIDE/i)).toBeInTheDocument();
     expect(fetchSpy.mock.calls.some(([input]) => String(input).includes('/api/v1/evaluations'))).toBe(false);
   });
+
+  it('keeps the landing page visible when the health endpoint returns an unexpected payload', async () => {
+    window.history.replaceState({}, '', '/');
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({}),
+    } as Response);
+
+    render(<App />);
+
+    expect(screen.getByText(/Turn vendor claims into/i)).toBeInTheDocument();
+    expect(await screen.findByText(/API health returned an unexpected response/i)).toBeInTheDocument();
+  });
 });

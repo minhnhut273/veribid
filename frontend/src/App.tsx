@@ -24,7 +24,13 @@ export function App() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    api.health().then(setHealth).catch(() => setError('API health is not reachable yet.'));
+    api.health().then((response) => {
+      if (typeof response?.data?.status !== 'string') {
+        setError('API health returned an unexpected response.');
+        return;
+      }
+      setHealth(response);
+    }).catch(() => setError('API health is not reachable yet.'));
     const onPopState = () => setPage(pageFromLocation());
     window.addEventListener('popstate', onPopState);
     return () => window.removeEventListener('popstate', onPopState);
@@ -58,7 +64,7 @@ export function App() {
     {page === 'demo' && <Demo demo={demo} onBack={() => navigate('home')} />}
     {page === 'app' && <Workspace onBack={() => navigate('home')} onDemo={() => navigate('demo')} />}
     {error && <div className={`toast${page === 'app' ? ' toast-workspace' : ''}`} role="status">{error}</div>}
-    <footer><span>Evidence first. Decisions remain human.</span><span>API {health?.data.status ?? 'checking'}</span></footer>
+    <footer><span>Evidence first. Decisions remain human.</span><span>API {health?.data?.status ?? 'checking'}</span></footer>
   </div>;
 }
 
@@ -69,7 +75,7 @@ function Landing({ health, onDemo, onApp }: { health: { data: { status: string }
       <h1>Turn vendor claims into <em>defensible</em> decisions.</h1>
       <p className="lede">VeriBid connects every assessment to source evidence, separates deterministic scoring from semantic reasoning, and keeps final judgment with your review team.</p>
       <div className="hero-actions"><button className="button-primary" onClick={onDemo}>Explore the public demo <span>↗</span></button><button className="button-quiet" onClick={onApp}>Start an evaluation</button></div>
-      <div className="health-pill"><span className={health?.data.status === 'ok' ? 'dot live' : 'dot'} /> {health?.data.status === 'ok' ? 'API connected' : 'Connecting to API'} </div>
+      <div className="health-pill"><span className={health?.data?.status === 'ok' ? 'dot live' : 'dot'} /> {health?.data?.status === 'ok' ? 'API connected' : 'Connecting to API'} </div>
     </section>
     <section className="feature-grid">
       <Feature number="01" title="Grounded by evidence" text="Every visible claim points back to a document, page, section, or cell. No unsupported confidence theater." />
