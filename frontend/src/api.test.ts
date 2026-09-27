@@ -60,4 +60,38 @@ describe('authenticated API requests', () => {
     expect(fetchAuthSession).toHaveBeenCalledTimes(1);
     expect((fetchMock.mock.calls[0][1]?.headers as Record<string, string>).authorization).toBe('Bearer auditor-token');
   });
+
+  it('refreshes and retries a write once when the API rejects a stale write-role claim', async () => {
+    fetchAuthSession
+      .mockResolvedValueOnce(session({
+        sub: 'user-1',
+        workspace_id: 'WS_user_1',
+        'cognito:groups': ['TenantAdmin'],
+      }, 'stale-token'))
+      .mockResolvedValueOnce(session({
+        sub: 'user-1',
+        workspace_id: 'WS_user_1',
+        'cognito:groups': ['SourcingLead'],
+      }, 'refreshed-token'));
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 403,
+        json: async () => ({ error: { code: 'FORBIDDEN', message: 'The Cognito group is read-only or missing' } }),
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 201,
+        json: async () => ({ data: { evaluation_id: 'EVAL_1', name: 'Procurement', status: 'CREATED', created_at: 'now' } }),
+      } as Response);
+    vi.stubGlobal('fetch', fetchMock);
+
+    await api.createEvaluation('Procurement');
+
+    expect(fetchAuthSession).toHaveBeenNthCalledWith(1);
+    expect(fetchAuthSession).toHaveBeenNthCalledWith(2, { forceRefresh: true });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect((fetchMock.mock.calls[0][1]?.headers as Record<string, string>).authorization).toBe('Bearer stale-token');
+    expect((fetchMock.mock.calls[1][1]?.headers as Record<string, string>).authorization).toBe('Bearer refreshed-token');
+  });
 });

@@ -601,7 +601,15 @@ def _get_export(event: dict[str, Any], evaluation_id: str, export_id: str) -> di
 def handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
     path = event.get("rawPath") or "/api/v1/health"
     method = (event.get("requestContext", {}).get("http", {}).get("method") or event.get("httpMethod") or "GET").upper()
-    print(json.dumps({"request_id": _request_id(event), "method": method, "path": path, "owner_present": bool(_owner(event))}, separators=(",", ":")))
+    groups = _groups(event)
+    print(json.dumps({
+        "request_id": _request_id(event),
+        "method": method,
+        "path": path,
+        "owner_present": bool(_owner(event)),
+        "group_count": len(groups),
+        "write_role_present": bool(groups & WRITE_ROLES),
+    }, separators=(",", ":")))
     if path == "/api/v1/health" and method == "GET":
         return _success({"service": os.getenv("SERVICE_NAME", "veribid-api"), "version": os.getenv("SERVICE_VERSION", "unknown"), "status": "ok", "timestamp": _now()}, event)
     if path == "/api/v1/demo" and method == "GET":
@@ -610,7 +618,7 @@ def handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
         return _error(401, "UNAUTHENTICATED", "A valid Cognito access token is required", event)
     if not _workspace_id(event):
         return _error(403, "WORKSPACE_REQUIRED", "The Cognito token must include workspace_id", event)
-    if method != "GET" and not (_groups(event) & WRITE_ROLES):
+    if method != "GET" and not (groups & WRITE_ROLES):
         return _error(403, "FORBIDDEN", "The Cognito group is read-only or missing", event)
     path_parameters = event.get("pathParameters") or {}
     try:

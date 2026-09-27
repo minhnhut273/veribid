@@ -28,15 +28,16 @@ export type ExportDto = { export_id: string; status: string; report_version: num
 const baseUrl = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.replace(/\/$/, '') ?? '';
 
 async function request<T>(path: string, init?: RequestInit, authenticated = false): Promise<T> {
-  let authorization: Record<string, string> = {};
+  const method = (init?.method ?? 'GET').toUpperCase();
+  const requiresWriteRole = authenticated && !['GET', 'HEAD', 'OPTIONS'].includes(method);
+  let accessToken: { payload?: unknown; toString(): string } | undefined;
+  let refreshAccessToken: (() => Promise<string | undefined>) | undefined;
   if (authenticated) {
     const { fetchAuthSession } = await import('aws-amplify/auth');
     let session = await fetchAuthSession();
-    let accessToken = session.tokens?.accessToken;
+    accessToken = session.tokens?.accessToken;
     const payload = accessToken?.payload as Record<string, unknown> | undefined;
     const workspaceId = payload?.workspace_id ?? payload?.['custom:workspace_id'];
-    const method = (init?.method ?? 'GET').toUpperCase();
-    const requiresWriteRole = !['GET', 'HEAD', 'OPTIONS'].includes(method);
     const rawGroups = payload?.['cognito:groups'];
     const groups = Array.isArray(rawGroups)
       ? rawGroups
@@ -52,15 +53,34 @@ async function request<T>(path: string, init?: RequestInit, authenticated = fals
       accessToken = session.tokens?.accessToken;
     }
 
-    const token = accessToken?.toString();
-    if (!token) throw new Error('Sign in is required for this workspace action.');
-    authorization = { authorization: `Bearer ${token}` };
+    if (!accessToken) throw new Error('Sign in is required for this workspace action.');
+    refreshAccessToken = async () => {
+      const refreshed = await fetchAuthSession({ forceRefresh: true });
+      return refreshed.tokens?.accessToken?.toString();
+    };
   }
-  const response = await fetch(`${baseUrl}${path}`, {
+  const send = (token?: string) => fetch(`${baseUrl}${path}`, {
     ...init,
-    headers: { accept: 'application/json', ...authorization, ...(init?.headers ?? {}) },
+    headers: {
+      accept: 'application/json',
+      ...(token ? { authorization: `Bearer ${token}` } : {}),
+      ...(init?.headers ?? {}),
+    },
   });
-  const payload = await response.json().catch(() => ({}));
+  let response = await send(accessToken?.toString());
+  let payload = await response.json().catch(() => ({}));
+  if (
+    requiresWriteRole &&
+    response.status === 403 &&
+    payload?.error?.code === 'FORBIDDEN' &&
+    refreshAccessToken
+  ) {
+    const refreshedToken = await refreshAccessToken();
+    if (refreshedToken) {
+      response = await send(refreshedToken);
+      payload = await response.json().catch(() => ({}));
+    }
+  }
   if (!response.ok) throw new Error(payload?.error?.message ?? `API request failed (${response.status})`);
   return payload as T;
 }
