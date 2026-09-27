@@ -42,7 +42,7 @@ Unlike generic procurement platforms or ungrounded AI chatbots, VeriBid enforces
 ## 🧠 System & Agent Architecture
 
 <p align="center">
-  <img src="docs/assets/veribid_architecture_diagram.jpg" alt="VeriBid Architecture Diagram" width="100%" />
+  <img src="docs/assets/veribid_architecture_diagram.jpg" alt="VeriBid AWS High-Level System Architecture Diagram" width="100%" />
 </p>
 
 ### Multi-Agent Topology & Verification Workflow
